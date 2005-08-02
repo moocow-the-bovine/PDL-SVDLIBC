@@ -4,7 +4,7 @@
 ## Header Administrivia
 ##======================================================================
 
-our $VERSION = '0.02';
+our $VERSION = '0.01';
 pp_setversion($VERSION);
 
 ##------------------------------------------------------
@@ -94,11 +94,11 @@ EOH
 pp_addhdr(<<'EOH');
 
 /*--------------------------------------------------------------*/
-double **p2pp_dbl(long nrows, long ncols, double *p)
+double **p2pp_dbl(int nrows, int ncols, double *p)
 {
-  long i;
+  int i;
 #ifdef CDEBUG
-  long j;
+  int j;
 #endif
   double **matrix;
   if (!(p && nrows && ncols)) return NULL;
@@ -107,9 +107,9 @@ double **p2pp_dbl(long nrows, long ncols, double *p)
   for (i=0; i < nrows; i++) {
     matrix[i] = p + (i*ncols);
 #ifdef CDEBUG
-    printf("p2pp_dbl(nr=%d,nc=%d,p=%p) : (p+%ld*%ld)=%p\n", nrows,ncols,p, i,ncols,matrix[i]);
+    printf("p2pp_dbl(nr=%d,nc=%d,p=%p) : (p+%d*%d)=%p\n", nrows,ncols,p, i,ncols,matrix[i]);
     for (j=0; j < ncols; j++) {
-      printf("p2pp_dbl: [i=%ld][j=%ld] : val=%g\n", i, j, matrix[i][j]);
+      printf("p2pp_dbl: [i=%d][j=%d] : val=%g\n", i, j, matrix[i][j]);
     }
 #endif
   }
@@ -119,7 +119,7 @@ double **p2pp_dbl(long nrows, long ncols, double *p)
 /*--------------------------------------------------------------*/
 static void pp2pdl(long nrows, long ncols, double **pp, double *p)
 {
-  long i,j;
+  int i,j;
   for (i=0; i<nrows; i++) {
     for (j=0; j<ncols; j++) {
       p[i*ncols+j] = pp[i][j];
@@ -130,7 +130,7 @@ static void pp2pdl(long nrows, long ncols, double **pp, double *p)
 /*--------------------------------------------------------------*/
 static void pp2pdl_long(long nrows, long ncols, long **pp, long *p)
 {
-  long i,j;
+  int i,j;
   for (i=0; i<nrows; i++) {
     for (j=0; j<ncols; j++) {
       p[i*ncols+j] = pp[i][j];
@@ -150,7 +150,7 @@ static void svdrec2pdls(SVDRec svdr, double *up, double *sp, double *vp)
 #ifdef DEBUG_CODE
 static void showpp_long(const char *name, long nrows, long ncols, long **pp)
 {
-  long i,j;
+  int i,j;
   printf("\n");
   for (i=0; i<nrows; i++) {
     for (j=0; j<ncols; j++) {
@@ -164,7 +164,7 @@ static void showpp_long(const char *name, long nrows, long ncols, long **pp)
 #ifdef DEBUG_CODE
 static void showpp_dbl(const char *name, long nrows, long ncols, double **pp)
 {
-  long i,j;
+  int i,j;
   printf("\n");
   for (i=0; i<nrows; i++) {
     for (j=0; j<ncols; j++) {
@@ -282,7 +282,7 @@ EOPM
 
 pp_def
   ('_svdccsencode',
-   Pars => q(double a(n,m); longlong [o]ptr(n1); longlong [o]rowids(nnz); double [o]nzvals(nnz);),
+   Pars => q(double a(n,m); int [o]ptr(n); int [o]rowids(nnz); double [o]nzvals(nnz);),
    Code =>
 ('
   struct dmat dm;
@@ -297,9 +297,9 @@ pp_def
   sm = svdConvertDtoS(&dm);
 
   /*printf("pp2pdl()\n");*/
-  pp2pdl_long(1, $SIZE(n)+1, &sm->pointr, (long *)  $P(ptr));
-  pp2pdl_long(1, sm->vals,   &sm->rowind, (long *)  $P(rowids));
-  pp2pdl     (1, sm->vals,   &sm->value,  (double *)$P(nzvals));
+  pp2pdl_long(1, $SIZE(n), &sm->pointr, (long *)  $P(ptr));
+  pp2pdl_long(1, sm->vals, &sm->rowind, (long *)  $P(rowids));
+  pp2pdl     (1, sm->vals, &sm->value,  (double *)$P(nzvals));
 
   /*-- cleanup --*/
   /*printf("cleanup()\n");*/
@@ -316,11 +316,11 @@ pp_def
   ('svdlas2',
    Pars => join("\n    ",
 		'',
-		q(longlong    ptr(nplus1);),
-		q(longlong    rowids(nnz);),
+		q(int     ptr(nplus1);),
+		q(int     rowids(nnz);),
 		q(double  nzvals(nnz);),
-		q(longlong    nrows();),
-		q(longlong    iterations();),
+		q(int     nrows();),
+		q(int     iterations();),
 		q(double  end(2);),
 		q(double  kappa();),
 		q(double  [o]ut(m,d);),
@@ -405,7 +405,7 @@ pp_def
    Pars => join("\n    ",
 		'',
 		q(double  a(n,m);),
-		q(longlong    iterations();),
+		q(int     iterations();),
 		q(double  end(2);),
 		q(double  kappa();),
 		q(double  [o]ut(m,d);),

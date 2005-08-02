@@ -50,10 +50,7 @@ sub gendatag {
 ##-- update cccs on changed $p
 sub udata {
   ($n,$m) = $p->dims;
-  ##-- ccs encode
   ($ptr,$rowids,$nzvals) = ccsencode($p);
-  #$ptr = $ptr->convert(longlong);
-  #$rowids = $rowids->convert(longlong);
   ##-- HACK: allocate an extra slot in $ptr
   $ptr->reshape($ptr->nelem+1);
   $ptr->set(-1, $rowids->nelem);
@@ -63,10 +60,10 @@ use vars qw($ptr1 $rowids1 $nzvals1);
 sub tccs {
   ($n,$m) = $p->dims;
   $nnz = $p->flat->nnz;
-  _svdccsencode($p,
-		($ptr1=zeroes(long,$n+1)-1),
-		($rowids1=zeroes(long,$nnz)-1),
-		($nzvals1=zeroes(long,$nnz)-1));
+  svdccsencode($p,
+	       ($ptr1=zeroes(long,$n)-1),
+	       ($rowids1=zeroes(long,$nnz)-1),
+	       ($nzvals1=zeroes(long,$nnz)-1));
 }
 
 use vars qw($iters $end $kappa $ut $ul $ssl $vt $vl $pbr $pbri);
