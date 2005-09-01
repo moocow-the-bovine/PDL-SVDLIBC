@@ -2,6 +2,9 @@
 ^SVDLIBC\.xs$
 ^SVDLIBC\.c$
 ~$
+^las2\.c$
+^svdlib\.c$
+^svdutil\.c$
 \.bs$
 \.o$
 \.old$
@@ -22,3 +25,4 @@
 ^SVDLIBC/
 \.dat$
 \.gp$
+^argh

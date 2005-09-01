@@ -7,6 +7,9 @@
 *.html
 *.old
 *.gz
+las2.c
+svdlib.c
+svdutil.c
 README.txt
 SVDLIBC.xs
 SVDLIBC.c

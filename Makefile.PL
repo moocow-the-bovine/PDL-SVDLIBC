@@ -20,8 +20,10 @@ $hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache';
 
 push(@{$hash{LIBS}},    ' '.$cconfig{SVD_LIBS});
 $hash{INC}           .= ' '.$cconfig{SVD_INC};
-$hash{LDFLAGS }      .= ' '.$cconfig{SVD_LDFLAGS};
-$hash{OBJECT}        .= ' '.$cconfig{SVD_OBJ};
+$hash{LDFLAGS}       .= ' '.$cconfig{SVD_LDFLAGS};
+$hash{OPTIMIZE}      .= ' '.$cconfig{SVD_CFLAGS};
+
+$hash{OBJECT}         .= ' las2.o svdlib.o svdutil.o';
 
 
 WriteMakefile(%hash);
@@ -46,6 +48,7 @@ sub MY::special_targets {
 "
 .SUFFIXES: .pm .pod .man .txt .html
 
+##-- Documentation stuff
 .pm.html:
 \tpod2html --outfile \$@ \$<
 
@@ -58,27 +61,21 @@ sub MY::special_targets {
 .pod.txt:
 \tpod2text \$< \$@
 
-#README.html: README.pod
-#\tpod2html --outfile \$@ \$<
-#
-#README.txt: README.pod
-#\tpod2text \$< \$@
 
-
-##-- SVDLIBC targets, assuming they're in ../SVDLIBC
-SVDLIBC ?= ../SVDLIBC
+##-- SVDLIBC sources
+SVDLIBC = $main::cconfig{SVD_SRCDIR}
 
 las2.c: \$(SVDLIBC)/las2.c
+\t\$(CP) \$< \$@
+
+svdlib.c: \$(SVDLIBC)/svdlib.c
 \t\$(CP) \$< \$@
 
 svdutil.c: \$(SVDLIBC)/svdutil.c
 \t\$(CP) \$< \$@
 
-svdlib.c: \$(SVDLIBC)/svdlib.c
-\t\$(CP) \$< \$@
 "
 }
-
 
 sub MY::top_targets {
   package MY;
