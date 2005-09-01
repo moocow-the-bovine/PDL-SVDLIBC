@@ -1,3 +1,6 @@
+^SVDLIBC\.pm$
+^SVDLIBC\.xs$
+^SVDLIBC\.c$
 ~$
 \.bs$
 \.o$

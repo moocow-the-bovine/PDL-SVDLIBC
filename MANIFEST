@@ -4,9 +4,6 @@ MANIFEST.SKIP
 Makefile.PL
 Config.PL
 SVDLIBC.pd
-SVDLIBC.pm
-SVDLIBC.xs
-SVDLIBC.c
 README.txt
 t/common.plt
 t/00_basic.t
