@@ -1,2 +1,8 @@
+ChangeLog for perl/PDL module PDL::SVDLIBC
+
+v0.04 Tue, 27 Feb 2007 18:58:12 +0100
+	+ replaced PDL 'longlong' specs with 'int', jives again with SVDLIBC 'long'
+	  - there's got to be a better way to do this...
+
 v0.01 Mon, 20 Jun 2005 23:59:20 +0200
 	+ initial version

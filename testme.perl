@@ -12,16 +12,16 @@ BEGIN{ $, = ' '; $eps=1e-6; }
 
 ##---------------------------------------------------------------------
 ## test: data
-use vars qw($p $ptr $rowids $nzvals);
+use vars qw($p $ptr $rowids $nzvals $a);
 sub tdata {
-  $p = pdl(double, [
-		    [10,0,0,0,-2,0,0],
-		    [3,9,0,0,0,3,1],
-		    [0,7,8,7,0,0,0],
-		    [3,0,8,7,5,0,1],
-		    [0,8,0,9,9,13,0],
-		    [0,4,0,0,2,-1,1],
-		   ]);
+  $p = $a = pdl(double, [
+			 [10,0,0,0,-2,0,0],
+			 [3,9,0,0,0,3,1],
+			 [0,7,8,7,0,0,0],
+			 [3,0,8,7,5,0,1],
+			 [0,8,0,9,9,13,0],
+			 [0,4,0,0,2,-1,1],
+			]);
   udata();
 }
 
@@ -72,25 +72,29 @@ sub tccs {
 use vars qw($iters $end $kappa $ut $ul $ssl $vt $vl $pbr $pbri);
 sub tlas2 {
   #$d=4;
+  tdata() if (!defined($p));
+
   $d = $p->dim(0);
   svdlas2($ptr,$rowids,$nzvals, $m,
 	  ($iters=pdl(14)),
 	  ($end=pdl(double,[-1e-30,1e-30])),
 	  ($kappa=pdl(1e-6)),
-	  ($ult = $ut = zeroes(double,$m,$d)),
-	  ($sl  = $s  = zeroes(double,$d)),
-	  ($vlt = $vt = zeroes(double,$n,$n)), ##-- $d-by-$n
+	  ($u2t = $u2t = zeroes(double,$m,$d)),
+	  ($s2  = $s2  = zeroes(double,$d)),
+	  ($v2t = $v2t = zeroes(double,$n,$d)), ##-- $d-by-$n
 	 );
 
   ##-- stretch, tranpose
-  $ul  = $u  = $ult->xchg(0,1);
-  $ssl = $ss = stretcher($sl);
-  $vl  = $v  = $vlt->xchg(0,1);
+  use vars qw($s2s);
+  $u2  = $u  = $u2t->xchg(0,1);
+  $s2s = $ss = stretcher($s2);
+  $v2  = $v  = $v2t->xchg(0,1);
 }
+#tlas2();
 
 
 use vars qw($udt $ud $sd $ssd $vdt $vd);
-sub tlas2d {
+sub tlas2d { #-- ok
   $d = $p->dim(0);
   svdlas2d($p,
 	  ($iters=pdl(14)),
@@ -116,34 +120,34 @@ sub tbuiltin {
 
 ##-- check copy-ability
 sub tcheck {
-  my $label = shift;
+  my ($label,$u,$s,$v) = @_;
   $label = '(nolabel)' if (!$label);
 
   ##-- hack
   $u->inplace->setnantobad->inplace->setbadtoval(0);
+  $s->inplace->setnantobad->inplace->setbadtoval(0);
   $v->inplace->setnantobad->inplace->setbadtoval(0);
-  $ut->inplace->setnantobad->inplace->setbadtoval(0);
-  $vt->inplace->setnantobad->inplace->setbadtoval(0);
 
   ##-- test: copy
-  $p2  = $u x $ss x $v->xchg(0,1);
+  $p2  = $u x stretcher($s) x $v->xchg(0,1);
 
   ##-- check
   print "$label : ", (all($p2->approx($p),$eps) ? "ok" : "NOT ok"), "\n";
 }
 
 sub checkall {
-  tlas2;
-  tcheck('las2');
+  tdata() if (!defined($p));
 
   tbuiltin;
-  tcheck('builtin');
+  tcheck('builtin', $ub,$sb,$vb);
 
   tlas2d;
-  tcheck('las2d');
-}
+  tcheck('las2d', $ud, $sd, $vd);
 
-#tdata; tlas2;
+  tlas2; ##-- strangeness with SVDLIBC 'long' vs. PDL 'int' or 'longlong' (now using: int)
+  tcheck('las2', $u2, $s2, $v2);
+}
+#checkall;
 
 
 
@@ -165,39 +169,12 @@ sub tbuiltinr {
   $sbr  = $sr  = $sb->slice("0:$d_1");
   $ssbr = $ssr = stretcher($sbr);
   $vbr  = $vr  = $v->slice("0:$d_1,:");
-
-  ##-- apply restriction
-  #$pbr  = $pr  = $p x $vr;
-  #$pbri = $pri = ($vr x $ssr x $ur->xchg(0,1))->xchg(0,1);
 }
 
 
 use vars qw($ulr $slr $sslr $vlr);
-sub tlas2r {
-  $dr=4 if (!defined($dr));
-  $d=$dr;
-  $d_1 = $d-1;
-
-  svdlas2($ptr,$rowids,$nzvals, $m,
-	  ($iters=pdl(14)),
-	  ($end=pdl(double,[-1e-30,1e-30])),
-	  ($kappa=pdl(1e-6)),
-	  ($ultr=zeroes(double,$m,$d)),
-	  ($slr=zeroes(double,$d)),
-	  ($vlt=zeroes(double,$n,$n)), ##-- $n-by-$d
-	 );
-
-  ##-- stretch, tranpose
-  $ulr  = $ur  = $ultr->xchg(0,1);
-  $vlr  = $vr  = $vlt->slice(":,0:$d_1")->xchg(0,1);
-  $sslr = $ssr = stretcher($slr);
-
-  ##-- apply restriction
-  #$plr  = $pr  = $p x $vlr;
-  #$plri = $pri = ($vr x $ssr x $ur->xchg(0,1))->slice(":,:,(0)")->xchg(0,1);
-}
-
 sub tlas2dr {
+  tdata() if (!defined($p));
   $dr=4 if (!defined($dr));
   $d=$dr;
   $d_1 = $d-1;
@@ -206,65 +183,91 @@ sub tlas2dr {
 	   ($iters=pdl(14)),
 	   ($end=pdl(double,[-1e-30,1e-30])),
 	   ($kappa=pdl(1e-6)),
-	   ($ultr=zeroes(double,$m,$d)),
-	   ($slr=zeroes(double,$d)),
-	   ($vlt=zeroes(double,$n,$n)), ##-- $n-by-$d
+	   ($udtr=zeroes(double,$m,$d)),
+	   ($sdr=zeroes(double,$d)),
+	   ($vdtr=zeroes(double,$n,$d)), ##-- $n-by-$d
 	  );
 
   ##-- stretch, tranpose
-  $ulr  = $ur  = $ultr->xchg(0,1);
-  $vlr  = $vr  = $vlt->slice(":,0:$d_1")->xchg(0,1);
-  $sslr = $ssr = stretcher($slr);
+  $udr  = $ur  = $udtr->xchg(0,1);
+  $vdr  = $vr  = $vdtr->xchg(0,1);
+  $ssdr = $ssr = stretcher($sdr);
 
   ##-- apply restriction
   #$plr  = $pr  = $p x $vlr;
   #$plri = $pri = ($vr x $ssr x $ur->xchg(0,1))->slice(":,:,(0)")->xchg(0,1);
 }
 
-##-- checkr($label)
-##   + uses current values of $dr, $d_1, $ur, $ssr, $vr
-sub checkr {
-  my ($label)=@_;
+sub tlas2r {
+  tdata if (!defined($p));
+  $dr=4 if (!defined($dr));
+  $d=$dr;
+  $d_1 = $d-1;
+
+  svdlas2($ptr,$rowids,$nzvals, $m,
+	  ($iters=pdl(14)),
+	  ($end=pdl(double,[-1e-30,1e-30])),
+	  ($kappa=pdl(1e-6)),
+	  ($u2rt=zeroes(double,$m,$d)),
+	  ($s2r=zeroes(double,$d)),
+	  ($v2rt=zeroes(double,$n,$d)), ##-- $n-by-$d
+	 );
+
+  ##-- stretch, tranpose
+  $u2r  = $ur  = $u2rt->xchg(0,1);
+  $v2r  = $vr  = $v2rt->xchg(0,1);
+  $ss2r = $ssr = stretcher($s2r);
+
+  ##-- apply restriction
+  #$plr  = $pr  = $p x $vlr;
+  #$plri = $pri = ($vr x $ssr x $ur->xchg(0,1))->slice(":,:,(0)")->xchg(0,1);
+}
+
+
+##-- tcheckr($label, $ur,$sr,$vr)
+##   + uses current values of $dr, $d_1, $ur, $ssr, $vr  : ?!?!?!
+use vars qw($ss2r $ssdr);
+sub tcheckr {
+  my ($label,$ur,$sr,$vr)=@_;
   $label = '(nolabel)' if (!$label);
+
+  ##-- bad-value hack
+  $ur->inplace->setnantobad->inplace->setbadtoval(0);
+  $sr->inplace->setnantobad->inplace->setbadtoval(0);
+  $vr->inplace->setnantobad->inplace->setbadtoval(0);
 
   ##-- apply restriction
   $plr  = $pr  = $p x $vr;
-  $plri = $pri = ($vr x $ssr x $ur->xchg(0,1))->slice(":,:,(0)")->xchg(0,1);
+  $plri = $pri = ($vr x stretcher($sr) x $ur->xchg(0,1))->slice(":,:,(0)")->xchg(0,1);
 
   print
     ("$label : decomp(",
-     (all($plr->approx($ur x $ssr)) ? "ok" : "NOT ok"),
+     (all($plr->approx($ur x stretcher($sr))) ? "ok" : "NOT ok"),
      "), ",
      "avg(err)=",sprintf("%.2g", abs($plri-$p)->avg), "\n",
     );
 }
 
-use vars qw($ut0 $s0 $ss0 $vt0 $utr $sr $ssr $vtr $vtrtmp $utr0 $sr0 $ssr0 $vtr0);
-sub checklas2r {
-  $dr = 4 if (!defined($dr));
-  $drm1 = $dr-1;
-  $d=4;
 
-  tlas2;
-  ($ut0,$s0,$ss0,$vt0)=($ut,$s,$ss,$vt);
-  $utr0 = $ut->slice(":,0:$drm1");
-  $sr0  = $s->slice("0:$drm1");
-  $ssr0 = stretcher($sr0);
-  $vtr0 = $vt->slice("0:$drm1,:");
+sub checkallr {
+  tdata() if (!defined($p));
+
+  tbuiltinr;
+  tcheckr('builtin', $ubr,$sbr,$vbr);
+
+  tlas2dr;
+  tcheckr('las2d', $udr, $sdr, $vdr);
 
   tlas2r;
-  ($utr,$sr,$ssr,$vtrtmp)=($ut,$s,$ss,$vt);
-  $vtr  = $vtrtmp->slice("0:$drm1,:");
-
-  ##-- copy 'em
-  #$p0c = $utr0->xchg(0,1) x $ssr0 x $vtr0;
+  tcheckr('las2', $u2r, $s2r, $v2r);
 }
+checkallr;
 
 
 ##---------------------------------------------------------------------
 ## DUMMY
 ##---------------------------------------------------------------------
-foreach $i (0..100) {
+foreach $i (0..3) {
   print "--dummy($i)--\n";
 }
 

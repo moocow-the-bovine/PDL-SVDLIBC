@@ -4,7 +4,7 @@
 ## Header Administrivia
 ##======================================================================
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 pp_setversion($VERSION);
 
 ##------------------------------------------------------
@@ -282,7 +282,8 @@ EOPM
 
 pp_def
   ('_svdccsencode',
-   Pars => q(double a(n,m); longlong [o]ptr(n1); longlong [o]rowids(nnz); double [o]nzvals(nnz);),
+   #Pars=> q(double a(n,m); longlong [o]ptr(n1); longlong [o]rowids(nnz); double [o]nzvals(nnz)),
+   Pars => q(double a(n,m); int      [o]ptr(n1); int      [o]rowids(nnz); double [o]nzvals(nnz)),
    Code =>
 ('
   struct dmat dm;
@@ -316,43 +317,57 @@ pp_def
   ('svdlas2',
    Pars => join("\n    ",
 		'',
-		q(longlong    ptr(nplus1);),
-		q(longlong    rowids(nnz);),
+		q(int     ptr(nplus1);),  ##-- longlong
+		q(int     rowids(nnz);),  ##-- longlong
 		q(double  nzvals(nnz);),
-		q(longlong    nrows();),
-		q(longlong    iterations();),
+		q(int     nrows();),
+		q(int     iterations();), ##-- longlong
 		q(double  end(2);),
 		q(double  kappa();),
 		q(double  [o]ut(m,d);),
 		q(double  [o] s(d);),
-		q(double  [o]vt(n,n);),
+		q(double  [o]vt(n,d);),
 		'',
 	       ),
    Code =>
 ('
   struct smat sm;
-  SVDRec      svdr;
+  SVDRec svdr;
 
   /*-- setup sparse matrix --*/
-  sm.rows   = $nrows();
-  sm.cols   = $SIZE(n);
-  sm.vals   = $SIZE(nnz);
+  sm.rows   = (long) $nrows();
+  sm.cols   = (long) $SIZE(n);
+  sm.vals   = (long) $SIZE(nnz);
   sm.pointr = (long *)$P(ptr);
   sm.rowind = (long *)$P(rowids);
-  sm.value  = $P(nzvals);
+  sm.value  = (double *)$P(nzvals);
+
+  /*-- view decoded stuff --*/
+#ifdef DEBUG_CODE
+  printf("sm: rows=%ld; cols=%ld; vals=%ld\n", sm.rows, sm.cols, sm.vals);
+  showpp_long("sm.pointr", 1, sm.cols+1,  &sm.pointr);
+  showpp_long("sm.rowind", 1, sm.vals,    &sm.rowind);
+  showpp_dbl("sm.value",  1, sm.vals,  &sm.value);
+  printf("--\n");
+#endif
 
   /*-- run SVD --*/
   svdr = svdLAS2(&sm, $SIZE(d), $iterations(), $P(end), $kappa());
   svdrec2pdls(svdr, $P(ut), $P(s), $P(vt));
 
   /*-- output some stats (debug) --*/
-  /*
+#ifdef DEBUG_CODE
   printf("svdrec.d=%d ~ d=%d\n", svdr->d, $SIZE(d));
   printf("svdrec.Ut.rows=%ld ~ d=%d\n", svdr->Ut->rows, $SIZE(d));
   printf("svdrec.Ut.cols=%ld ~ m=%d\n", svdr->Ut->cols, $SIZE(m));
   printf("svdrec.Vt.rows=%ld ~ n=%d\n", svdr->Vt->cols, $SIZE(n));
   printf("svdrec.Vt.cols=%ld ~ d=%d !~ n=%d\n", svdr->Vt->cols, $SIZE(d), $SIZE(n));
-  */
+#endif
+
+  /*-- pre-cleanup --*/
+  sm.pointr = NULL;
+  sm.rowind = NULL;
+  sm.value  = NULL;
 
   /*-- cleanup --*/
   if (svdr) svdFreeSVDRec(svdr);
@@ -410,7 +425,7 @@ pp_def
 		q(double  kappa();),
 		q(double  [o]ut(m,d);),
 		q(double  [o] s(d);),
-		q(double  [o]vt(n,n);),
+		q(double  [o]vt(n,d);),
 		'',
 	       ),
    Code =>
