@@ -1,0 +1,90 @@
+use PDL::Core::Dev;
+use ExtUtils::MakeMaker;
+
+##-- read in user variables
+do "Config.PL";
+die("$0: 'do Config.PL' failed: $@") if ($@);
+
+
+PDL::Core::Dev->import();
+
+$package = ["SVDLIBC.pd",SVDLIBC,PDL::SVDLIBC];
+%hash = pdlpp_stdargs($package);
+
+$hash{AUTHOR} = 'Bryan Jurish';
+$hash{ABSTRACT} = 'PDL interface to Doug Rohde\'s SVD C Library';
+$hash{PREREQ_PM}{PDL} = '2.4.2'; ##-- ensure PDL-ability
+$hash{DIR} = [];
+$hash{VERSION_FROM} = 'SVDLIBC.pd';
+$hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache';
+
+push(@{$hash{LIBS}},    ' '.$cconfig{SVD_LIBS});
+$hash{INC}           .= ' '.$cconfig{SVD_INC};
+$hash{LDFLAGS}       .= ' '.$cconfig{SVD_LDFLAGS};
+$hash{OPTIMIZE}      .= ' '.$cconfig{SVD_CFLAGS};
+
+$hash{OBJECT}         .= ' las2.o svdlib.o svdutil.o';
+
+
+WriteMakefile(%hash);
+
+sub MY::depend {
+  package MY;
+  my $inherited = shift->SUPER::depend(@_);
+  $inherited .= (
+		 "\n\n"
+		 ."dist: README.txt\n"
+		 ."\n"
+		 ."distcheck: README.txt\n"
+		 ."\n"
+		 ."create_distdir: README.txt\n"
+		 ."\n"
+		);
+}
+
+sub MY::special_targets {
+  package MY;
+  my $inherited = shift->SUPER::special_targets(@_);
+  #$inherited =~ s/^(\.SUFFIXES\s*:.*)$/$1 .pod .pm .man .txt .html;/
+  $inherited .=
+"
+.SUFFIXES: .pm .pod .man .txt .html
+
+##-- Documentation stuff
+.pm.html:
+\tpod2html --outfile \$@ \$<
+
+.pm.txt:
+\tpod2text \$< \$@
+
+.pod.html:
+\tpod2html --outfile \$@ \$<
+
+.pod.txt:
+\tpod2text \$< \$@
+
+
+##-- SVDLIBC sources
+SVDLIBC = $main::cconfig{SVD_SRCDIR}
+
+las2.c: \$(SVDLIBC)/las2.c
+\t\$(CP) \$< \$@
+
+svdlib.c: \$(SVDLIBC)/svdlib.c
+\t\$(CP) \$< \$@
+
+svdutil.c: \$(SVDLIBC)/svdutil.c
+\t\$(CP) \$< \$@
+
+"
+}
+
+sub MY::top_targets {
+  package MY;
+  my $inherited = shift->SUPER::top_targets(@_);
+  $inherited;
+}
+
+sub MY::postamble {
+  pdlpp_postamble($package);
+}

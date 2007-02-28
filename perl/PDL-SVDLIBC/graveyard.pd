@@ -1,0 +1,62 @@
+##--------------------------------------------------------------
+## SVD Globals: verbosity
+pp_addpm(<<'EOPM');
+=pod
+
+=head2 PDL::SVDLIBC::getVerbose()
+
+Returns the current SVDLIBC verbosity level.
+Valid values between 0 (no messages) and 2 (many messages).
+
+=head2 PDL::SVDLIBC::setVerbose($vlevel)
+
+Sets the current SVDLIBC verbosity level.
+May be useful for debugging.
+
+=cut
+
+EOPM
+
+pp_addxs('','
+
+int
+getVerbose()
+CODE:
+  RETVAL = SVDVerbosity;
+OUTPUT:
+  RETVAL
+
+int
+setVerbose(int vlevel)
+CODE:
+  RETVAL = SVDVerbosity = vlevel;
+OUTPUT:
+  RETVAL
+
+');
+
+
+##--------------------------------------------------------------
+## SVD Globals: version
+pp_addpm(<<'EOPM');
+=pod
+
+=head2 PDL::SVDLIBC::svdVersion()
+
+Returns a string representing the SVDLIBC version
+this module was compiled with.
+
+=cut
+
+EOPM
+
+pp_addxs('','
+
+char *
+svdVersion()
+CODE:
+  RETVAL = SVDVersion;
+OUTPUT:
+  RETVAL
+
+');
