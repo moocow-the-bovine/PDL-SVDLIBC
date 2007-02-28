@@ -37,6 +37,8 @@ sub MY::depend {
 		 ."\n"
 		 ."distcheck: README.txt\n"
 		 ."\n"
+		 ."create_distdir: README.txt\n"
+		 ."\n"
 		);
 }
 

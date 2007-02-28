@@ -310,9 +310,95 @@ pp_def
   );
 #pp_add_exported('', 'svdccsencode');
 
+##------------------------------------------------------
+## svdlas2a() : singular value decomposition (convenience)
+pp_add_exported('','svdlas2a');
+pp_addpm(<<'EOPM');
+
+=pod
+
+=head2 svdlas2a
+
+=for sig
+
+    int     ptr(nplus1);
+    int     rowids(nnz);
+    double  nzvals(nnz);
+    int     nrows();      ##-- default: max($rowids)+1
+    int     d();          ##-- default: nplus1-1
+    int     iterations(); ##-- default: 2*$d
+    double  end(2);       ##-- default: [-1e-30,1e-30]
+    double  kappa();      ##-- default: 1e-6
+    double  [o]ut(m,d);   ##-- default: new
+    double  [o] s(d);     ##-- default: new
+    double  [o]vt(n,d);   ##-- default: new
+
+Uses a variant of the single-vector Lanczos method (Lanczos, 1950)
+to compute the singular value decomposition of a sparse matrix with
+$nrows() rows and data encoded
+in Harwell-Boeing sparse format in the input parameters $ptr(), $rowids(),
+and $nzvals().  See L<"PDL::CCS"> for a way to acquire these parameters
+from a dense input matrix, but note that for svdlas2(), the
+column pointer $ptr() is of size ($n+1) for a dense matrix $a with
+$n columns, where $ptr($n)==$nnz is the total number of nonzero
+values in $a.
+
+$iterations() is the maximum number of Lanczos iterations to perform.
+
+$end() specifies two endpoints of an interval within which all unwanted
+eigenvalues lie.
+
+$kappa() is a double containing the relative accuracy of Ritz
+values acceptable as eigenvalues.
+
+The left singular components are returned in the matrix $ut(),
+the singular values themselved in the vector $s(), and the
+right singular components in the matrix $vt().  Note that
+$ut() and $vt() are transposed, and must be specified explicitly
+in the call, so that the degree of reduction (the size parameter $d)
+can be determined.  If $d==$n, then a full decomposition
+will be computed, and on return, $ut() and $vt() should be transposed
+instances of the matrices $u() and $v() as returned by PDL::MatrixOps::svd().
+
+The Lanczos method as used here seems to be consistently the
+fastest. This algorithm has the drawback that the low order singular
+values may be relatively imprecise, but that is not a problem for most
+users who only want the higher-order values or who can tolerate some
+imprecision.
+
+See also: svdlas2d()
+
+=cut
+
+## ($iters,$end,$kappa,$ut,$s,$vt) = svddefaults($nrows,$ncols,$d, $iters,...)
+## + returns default values
+sub svddefaults {
+    my ($nrows,$ncols,$d, $iters,$end,$kappa,$ut,$s,$vt) = @_;
+    $nrows = $nrows->at(0) if (UNIVERSAL::isa($nrows,'PDL'));
+    $ncols = $ncols->at(0) if (UNIVERSAL::isa($ncols,'PDL'));
+    $d     = $ncols if (!defined($d));
+    $iters = 2*$d if (!defined($iters));
+    $end   = pdl(double,[-1e-30,1e-30]) if (!defined($end));
+    $kappa = pdl(double,1e-6) if (!defined($kappa));
+    $ut    = PDL->zeroes(double,$nrows,$d) if (!defined($ut));
+    $s     = PDL->zeroes(double,$d) if (!defined($s));
+    $vt    = PDL->zeroes(double,$ncols,$d) if (!defined($vt));
+    return ($iters,$end,$kappa,$ut,$s,$vt);
+}
+
+sub svdlas2a {
+    my ($ptr,$rowids,$nzvals, $nrows,$d, @args) = @_;
+    $nrows = $rowids->flat->max+1 if (!defined($nrows));
+    @args = svddefaults($ptr->dim(0)-1,$nrows,$d,@args);
+    svdlas2($ptr,$ropwids,$nzvals,$nrows,@args);
+    return @args[3..5];
+}
+
+EOPM
+
 
 ##------------------------------------------------------
-## svdLAS2() : singular value decomposition
+## svdLAS2() : singular value decomposition (low-level)
 pp_def
   ('svdlas2',
    Pars => join("\n    ",
@@ -374,44 +460,47 @@ pp_def
 '),
    Doc =>
 q(
-Uses a variant of the single-vector Lanczos method (Lanczos, 1950)
-to compute the singular value decomposition of a sparse matrix with
-$nrows() rows and data encoded
-in Harwell-Boeing sparse format in the input parameters $ptr(), $rowids(),
-and $nzvals().  See L<"PDL::CCS"> for a way to acquire these parameters
-from a dense input matrix, but note that for svdlas2(), the
-column pointer $ptr() is of size ($n+1) for a dense matrix $a with
-$n columns, where $ptr($n)==$nnz is the total number of nonzero
-values in $a.
-
-$iterations() is the maximum number of Lanczos iterations to perform.
-
-$end() specify two endpoints of an interval within which all unwanted
-eigenvalues lie (a good default interval is  [-1e-30, 1e-30]).
-
-$kappa() is a double containing the relative accuracy of Ritz
-values acceptable as eigenvalues (a good default is 1e-6).
-
-The left singular components are returned in the matrix $ut(),
-the singular values themselved in the vector $s(), and the
-right singular components in the matrix $vt().  Note that
-$ut() and $vt() are transposed, and must be specified explicitly
-in the call, so that the degree of reduction (the size parameter $d)
-can be determined.  If $d==$n, then a full decomposition
-will be computed, and on return, $ut() and $vt() should be transposed
-instances of the matrices $u() and $v() as returned by PDL::MatrixOps::svd().
-
-The Lanczos method as used here seems to be consistently the
-fastest. This algorithm has the drawback that the low order singular
-values may be relatively imprecise, but that is not a problem for most
-users who only want the higher-order values or who can tolerate some
-imprecision.
-
-See also: svdlas2d()
+Guts for svdlas2a().
+No default instantiation, and slightly different calling conventions.
 ),
 );
 #pp_add_exported('', 'svdlas2');
 
+
+
+##------------------------------------------------------
+## svdlas2ad() : singular value decomposition (dense): convenience
+pp_add_exported('','svdlas2ad');
+pp_addpm(<<'EOPM');
+
+=pod
+
+=head2 svdlas2ad
+
+=for sig
+
+    double  a(n,m);
+    int     d();          ##-- default: $n
+    int     iterations(); ##-- default: 2*$d
+    double  end(2);       ##-- default: [-1e-30,1e-30]
+    double  kappa();      ##-- default: 1e-6
+    double  [o]ut(m,d);   ##-- default: new
+    double  [o] s(d);     ##-- default: new
+    double  [o]vt(n,d);   ##-- default: new
+
+As for svdlas2(), but implicitly converts the dense input matrix
+$a() to sparse format before computing the decomposition.
+
+=cut
+
+sub svdlas2ad {
+    my ($a,$d, @args) = @_;
+    @args = svddefaults($a->dim(1),$a->dim(0),$d,@args);
+    svdlas2d($a,@args);
+    return @args[3..5];
+}
+
+EOPM
 
 ##------------------------------------------------------
 ## svdlas2d() : singular value decomposition (dense)
@@ -420,7 +509,7 @@ pp_def
    Pars => join("\n    ",
 		'',
 		q(double  a(n,m);),
-		q(longlong    iterations();),
+		q(int     iterations();),
 		q(double  end(2);),
 		q(double  kappa();),
 		q(double  [o]ut(m,d);),
@@ -453,8 +542,7 @@ pp_def
 '),
    Doc =>
 q(
-As for svdlas2(), but implicitly converts the dense input matrix
-$a() to sparse format before computing the decomposition.
+Guts for _svdlas2d().
 ),
 );
 #pp_add_exported('', 'svdlas2d');
