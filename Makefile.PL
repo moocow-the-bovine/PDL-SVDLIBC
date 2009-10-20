@@ -16,12 +16,13 @@ $hash{ABSTRACT} = 'PDL interface to Doug Rohde\'s SVD C Library';
 $hash{PREREQ_PM}{PDL} = '2.4.2'; ##-- ensure PDL-ability
 $hash{DIR} = [];
 $hash{VERSION_FROM} = 'SVDLIBC.pd';
-$hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache';
+$hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache las2.c svdlib.c svdutil.c svdutil.h svdlib.h';
 
 push(@{$hash{LIBS}},    ' '.$cconfig{SVD_LIBS});
 $hash{INC}           .= ' '.$cconfig{SVD_INC};
 $hash{LDFLAGS}       .= ' '.$cconfig{SVD_LDFLAGS};
 $hash{OPTIMIZE}      .= ' '.$cconfig{SVD_CFLAGS};
+$hash{CCFLAGS}       .= ' '.$cconfig{SVD_DEFS};
 
 $hash{OBJECT}         .= ' las2.o svdlib.o svdutil.o';
 
@@ -39,6 +40,11 @@ sub MY::depend {
 		 ."\n"
 		 ."create_distdir: README.txt\n"
 		 ."\n"
+		 ."\n"
+		 ##--
+		 ."las2.o: las2.c svdutil.h svdlib.h\n"
+		 ."svdlib.o: svdlib.c svdutil.h svdlib.h\n"
+		 ."svdutil.o: svdutil.c svdutil.h svdlib.h\n"
 		);
 }
 
@@ -68,14 +74,19 @@ sub MY::special_targets {
 SVDLIBC = $main::cconfig{SVD_SRCDIR}
 
 las2.c: \$(SVDLIBC)/las2.c
-\t\$(CP) \$< \$@
+\t\$(PERL) hack-int-types.perl < \$< > \$@
 
 svdlib.c: \$(SVDLIBC)/svdlib.c
-\t\$(CP) \$< \$@
+\t\$(PERL) hack-int-types.perl < \$< > \$@
 
 svdutil.c: \$(SVDLIBC)/svdutil.c
-\t\$(CP) \$< \$@
+\t\$(PERL) hack-int-types.perl < \$< > \$@
 
+svdlib.h: \$(SVDLIBC)/svdlib.h
+\t\$(PERL) hack-int-types.perl < \$< > \$@
+
+svdutil.h: \$(SVDLIBC)/svdutil.h
+\t\$(PERL) hack-int-types.perl < \$< > \$@
 "
 }
 

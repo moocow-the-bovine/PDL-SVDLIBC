@@ -29,7 +29,11 @@ cprompt('SVD_SRCDIR', "SVDLIBC source directory", '../SVDLIBC');
 ## $SVD_INC : include flags for SVDLIBC
 #cprompt('SVD_INC', "include flags for SVDLIBC", '-I/usr/local/include/svdlibc');
 #cprompt('SVD_INC', "Additional include flags for SVDLIBC", "-I$cconfig{SVD_SRCDIR}");
-$cconfig{SVD_INC} = "-I$cconfig{SVD_SRCDIR}";
+#$cconfig{SVD_INC} = "-I$cconfig{SVD_SRCDIR}";
+$cconfig{SVD_INC} = "-I.";
+
+## $SVD_DEFS : additional defines for SVDLIBC
+cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG_LONG='long long' -D__SVDLIBC_LONG='int'");
 
 ## $SVD_CFLAGS : additional compiler flags for SVDLIBC
 cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "$ENV{CFLAGS}");
@@ -49,14 +53,12 @@ cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "$ENV{CFLAGS}");
 #      );
 
 
-
-
 ##-- save cache file
 open(CACHE,">Config.cache")
   or die("$0: open failed for Config.cache: $!");
 print CACHE "## Automatically generated, remove to re-configure!\n";
 while (($key,$val)=each(%cconfig)) {
-  print CACHE "\$cconfig{'$key'} = '$val';\n";
+  print CACHE "\$cconfig{'$key'} = q($val);\n";
 }
 print CACHE "1;\n";
 close CACHE;

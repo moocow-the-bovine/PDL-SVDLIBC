@@ -5,6 +5,7 @@ Makefile.PL
 Config.PL
 SVDLIBC.pd
 README.txt
+hack-int-types.perl
 t/common.plt
 t/00_basic.t
 t/01_svd.t
