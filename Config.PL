@@ -36,7 +36,11 @@ $cconfig{SVD_INC} = "-I.";
 cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG_LONG='long long' -D__SVDLIBC_LONG='int'");
 
 ## $SVD_CFLAGS : additional compiler flags for SVDLIBC
-cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "$ENV{CFLAGS}");
+# + do *NOT* use -ffast-math !
+#cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "-O3 -pipe -march=prescott -mmmx -msse -msse2 -msse3 -mfpmath=sse");
+#cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "$ENV{CFLAGS}");
+#cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "-O2 -pipe");
+cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", $ENV{OPTIMIZE});
 
 ## $SVD_LDFLAGS : linker flags for SVDLIBC
 #cprompt('SVD_LDFLAGS', "linker flags for SVDLIBC", '-L/usr/local/lib');
