@@ -42,6 +42,7 @@ sub MY::depend {
 		 ."\n"
 		 ."\n"
 		 ##--
+		 ."SVDLIBC.o: svdutil.h svdlib.h\n"
 		 ."las2.o: las2.c svdutil.h svdlib.h\n"
 		 ."svdlib.o: svdlib.c svdutil.h svdlib.h\n"
 		 ."svdutil.o: svdutil.c svdutil.h svdlib.h\n"
