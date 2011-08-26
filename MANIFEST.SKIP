@@ -1,3 +1,5 @@
+\.svn
+\.gz$
 ^csizes
 ^pdlsizes
 ^SVDLIBC\.pm$
@@ -22,7 +24,7 @@
 ^graveyard\.
 ^Makefile$
 ^testme\.perl$
-^README\.pod$
+^README\.(?:r?)pod$
 \.html$
 \.tmp$
 ^#Makefile#$

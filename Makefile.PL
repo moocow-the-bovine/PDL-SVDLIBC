@@ -52,10 +52,10 @@ sub MY::depend {
 sub MY::special_targets {
   package MY;
   my $inherited = shift->SUPER::special_targets(@_);
-  #$inherited =~ s/^(\.SUFFIXES\s*:.*)$/$1 .pod .pm .man .txt .html;/
+  #$inherited =~ s/^(\.SUFFIXES\s*:.*)$/$1 .pod .rpod .pm .man .txt .html;/
   $inherited .=
 "
-.SUFFIXES: .pm .pod .man .txt .html
+.SUFFIXES: .pm .pod .rpod .man .txt .html
 
 ##-- Documentation stuff
 .pm.html:
@@ -68,6 +68,12 @@ sub MY::special_targets {
 \tpod2html --outfile \$@ \$<
 
 .pod.txt:
+\tpod2text \$< \$@
+
+.rpod.html:
+\tpod2html --outfile \$@ \$<
+
+.rpod.txt:
 \tpod2text \$< \$@
 
 
