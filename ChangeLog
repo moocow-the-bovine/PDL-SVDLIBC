@@ -1,5 +1,14 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.05 2009-10-30  moocow
+	* [r3614] SVDLIBC.pd: + removed DEBUG flags
+
+v0.05 2009-10-20  moocow
+	* [r3542] Config.PL, SVDLIBC.pd: + optimization flag hacks
+	* [r3541] ., Config.PL, MANIFEST, MANIFEST.SKIP, Makefile.PL,
+	  SVDLIBC.pd, csizes.c, hack-int-types.perl, pdlsizes.perl: v0.06:
+	  should now compile & run on both 32- and 64-bit
+
 v0.04 Tue, 27 Feb 2007 18:58:12 +0100
 	+ replaced PDL 'longlong' specs with 'int', jives again with SVDLIBC 'long'
 	  - there's got to be a better way to do this...
