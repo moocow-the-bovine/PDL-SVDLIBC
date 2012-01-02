@@ -7,9 +7,10 @@ die("$0: 'do Config.PL' failed: $@") if ($@);
 
 
 PDL::Core::Dev->import();
+require "pdlmaker.plm";
 
 $package = ["SVDLIBC.pd",SVDLIBC,PDL::SVDLIBC];
-%hash = pdlpp_stdargs($package);
+%hash = pdlmaker_init($package);
 
 $hash{AUTHOR} = 'Bryan Jurish';
 $hash{ABSTRACT} = 'PDL interface to Doug Rohde\'s SVD C Library';
@@ -34,18 +35,11 @@ sub MY::depend {
   my $inherited = shift->SUPER::depend(@_);
   $inherited .= (
 		 "\n\n"
-		 ."dist: README.txt\n"
-		 ."\n"
-		 ."distcheck: README.txt\n"
-		 ."\n"
-		 ."create_distdir: README.txt\n"
-		 ."\n"
-		 ."\n"
 		 ##--
-		 ."SVDLIBC.o: svdutil.h svdlib.h\n"
-		 ."las2.o: las2.c svdutil.h svdlib.h\n"
-		 ."svdlib.o: svdlib.c svdutil.h svdlib.h\n"
-		 ."svdutil.o: svdutil.c svdutil.h svdlib.h\n"
+		 ."SVDLIBC.o: svdutil.h svdlib.h\n\n"
+		 ."las2.o: las2.c svdutil.h svdlib.h\n\n"
+		 ."svdlib.o: svdlib.c svdutil.h svdlib.h\n\n"
+		 ."svdutil.o: svdutil.c svdutil.h svdlib.h\n\n"
 		);
 }
 
@@ -53,29 +47,7 @@ sub MY::special_targets {
   package MY;
   my $inherited = shift->SUPER::special_targets(@_);
   #$inherited =~ s/^(\.SUFFIXES\s*:.*)$/$1 .pod .rpod .pm .man .txt .html;/
-  $inherited .=
-"
-.SUFFIXES: .pm .pod .rpod .man .txt .html
-
-##-- Documentation stuff
-.pm.html:
-\tpod2html --outfile \$@ \$<
-
-.pm.txt:
-\tpod2text \$< \$@
-
-.pod.html:
-\tpod2html --outfile \$@ \$<
-
-.pod.txt:
-\tpod2text \$< \$@
-
-.rpod.html:
-\tpod2html --outfile \$@ \$<
-
-.rpod.txt:
-\tpod2text \$< \$@
-
+  $inherited .= "
 
 ##-- SVDLIBC sources
 SVDLIBC = $main::cconfig{SVD_SRCDIR}
@@ -94,15 +66,6 @@ svdlib.h: \$(SVDLIBC)/svdlib.h
 
 svdutil.h: \$(SVDLIBC)/svdutil.h
 \t\$(PERL) hack-int-types.perl < \$< > \$@
+
 "
-}
-
-sub MY::top_targets {
-  package MY;
-  my $inherited = shift->SUPER::top_targets(@_);
-  $inherited;
-}
-
-sub MY::postamble {
-  pdlpp_postamble($package);
 }

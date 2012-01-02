@@ -2,8 +2,10 @@ ChangeLog
 MANIFEST
 MANIFEST.SKIP
 Makefile.PL
+pdlmaker.plm
 Config.PL
-SVDLIBC.pd
+SVDLIBC.pd				# SVDLIBC.pm
+SVDLIBC.pm
 README.txt
 hack-int-types.perl
 t/common.plt
