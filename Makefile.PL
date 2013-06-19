@@ -23,7 +23,11 @@ push(@{$hash{LIBS}},    ' '.$cconfig{SVD_LIBS});
 $hash{INC}           .= ' '.$cconfig{SVD_INC};
 $hash{LDFLAGS}       .= ' '.$cconfig{SVD_LDFLAGS};
 $hash{OPTIMIZE}      .= ' '.$cconfig{SVD_CFLAGS};
-$hash{CCFLAGS}       .= ' '.$cconfig{SVD_DEFS};
+
+##-- include $Config{ccflags} explicitly to avoid errors like:
+## t/00_basic.t .. Not a CODE reference at /usr/lib/perl/5.14/DynaLoader.pm line 207.
+use Config;
+$hash{CCFLAGS}       .= " $Config{ccflags} ".$cconfig{SVD_DEFS};
 
 $hash{OBJECT}         .= ' las2.o svdlib.o svdutil.o';
 
