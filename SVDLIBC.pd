@@ -7,23 +7,23 @@
 our $VERSION = '0.07';
 pp_setversion($VERSION);
 
+do "./Config.cache";
+if ($@) {
+  warn("$0: could not load cache data from './Config.cache': $@");
+}
+
 ##------------------------------------------------------
 ## Header: PDL_Indx
 require PDL::Core;
 my ($INDX);
-if (defined(&PDL::indx)) {
+if ($cconfig{ENABLE_PDL_INDX} && defined(&PDL::indx)) {
+  ##-- use this to support 64-bit indices with PDL_Indx (but which() and friends don't return them!)
   #print STDERR "PDL >= v2.007 detected : using built-in PDL_Indx type\n";
   $INDX = 'indx';
-  pp_addhdr("/* No PDL_Indx typedef needed for PDL >= v2.007 */\n");
-  pp_addpm("*svdlibc_indx = \&PDL::indx;\n");
 } else {
   #print STDERR "PDL < v2.007 detected : using hacked PDL_Indx type\n";
   $INDX = 'int';
-  $pindx = 'long';
-  pp_addhdr("/* PDL_Indx typedef hack for PDL < v2.007 */\n"
-	    ."typedef int PDL_Indx;\n"
-	   );
-  pp_addpm("*svdlibc_indx = \&PDL::long;\n");
+  #pp_addpm("*svdlibc_indx = \&PDL::long;\n");
 }
 
 
@@ -148,7 +148,7 @@ static void pp2pdl(int nrows, int ncols, double **pp, double *p)
 }
 
 /*--------------------------------------------------------------*/
-static void pp2pdl_indx(int nrows, int ncols, PDL_Indx **pp, PDL_Indx *p)
+static void pp2pdl_indx(int nrows, int ncols, __SVDLIBC_LONG **pp, __SVDLIBC_LONG *p)
 {
   int i,j;
   for (i=0; i<nrows; i++) {
@@ -168,7 +168,7 @@ static void svdrec2pdls(SVDRec svdr, double *up, double *sp, double *vp)
 
 /*--------------------------------------------------------------*/
 #ifdef DEBUG_CODE
-static void showpp_indx(const char *name, int nrows, int ncols, PDL_Indx **pp)
+static void showpp_indx(const char *name, int nrows, int ncols, __SVDLIBC_LONG **pp)
 {
   int i,j;
   printf("\n");
@@ -318,8 +318,8 @@ pp_def
   sm = svdConvertDtoS(&dm);
 
   /*printf("pp2pdl()\n");*/
-  pp2pdl_indx(1, $SIZE(n)+1, &sm->pointr, (PDL_Indx *) $P(ptr));
-  pp2pdl_indx(1, sm->vals,   &sm->rowind, (PDL_Indx *) $P(rowids));
+  pp2pdl_indx(1, $SIZE(n)+1, &sm->pointr, (__SVDLIBC_LONG *) $P(ptr));
+  pp2pdl_indx(1, sm->vals,   &sm->rowind, (__SVDLIBC_LONG *) $P(rowids));
   pp2pdl     (1, sm->vals,   &sm->value,  (double   *) $P(nzvals));
 
   /*-- cleanup --*/
@@ -441,11 +441,11 @@ pp_def
   SVDRec svdr;
 
   /*-- setup sparse matrix --*/
-  sm.rows   = (PDL_Indx) $nrows();
-  sm.cols   = (PDL_Indx) $SIZE(n);
-  sm.vals   = (PDL_Indx) $SIZE(nnz);
-  sm.pointr = (PDL_Indx *)$P(ptr);
-  sm.rowind = (PDL_Indx *)$P(rowids);
+  sm.rows   = (__SVDLIBC_LONG) $nrows();
+  sm.cols   = (__SVDLIBC_LONG) $SIZE(n);
+  sm.vals   = (__SVDLIBC_LONG) $SIZE(nnz);
+  sm.pointr = (__SVDLIBC_LONG *)$P(ptr);
+  sm.rowind = (__SVDLIBC_LONG *)$P(rowids);
   sm.value  = (double *)$P(nzvals);
 
   /*-- view decoded stuff --*/
@@ -610,7 +610,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head2 Copyright Policy
 
-Copyright (C) 2005, Bryan Jurish. All rights reserved.
+Copyright (C) 2005-2013, Bryan Jurish. All rights reserved.
 
 This package is free software, and entirely without warranty.
 You may redistribute it and/or modify it under the same terms

@@ -1,4 +1,4 @@
-# -*- Mode: Perl -*-
+# -*- Mode: CPerl -*-
 # t/01_svd.t: test las2 svd
 
 $TEST_DIR = './t';

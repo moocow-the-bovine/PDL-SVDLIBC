@@ -33,9 +33,12 @@ cprompt('SVD_SRCDIR', "SVDLIBC source directory", '../SVDLIBC');
 $cconfig{SVD_INC} = "-I.";
 
 ## $SVD_DEFS : additional defines for SVDLIBC
+cprompt("ENABLE_PDL_INDX", "Enable 64-bit PDL_Indx support if available (requires PDL >= v2.007)", "0");
 require PDL::Core;
-my ($LONG,$LONGLONG) = defined(&PDL::indx) ? ('PDL_Indx','PDL_Indx') : ('PDL_Long','PDL_LongLong');
-cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG='$LONG' -D__SVDLIBC_LONG_LONG='$LONGLONG'");
+my ($LONG,$LONGLONG) = $cconfig{ENABLE_PDL_INDX} && defined(&PDL::indx) ? ('PDL_Indx','PDL_Indx') : ('PDL_Long','PDL_LongLong');
+cprompt('SVD_LONG',     "SVDLIBC long integer datatype", "$LONG");
+cprompt('SVD_LONGLONG', "SVDLIBC long long integer datatype", "$LONGLONG");
+cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG='$cconfig{SVD_LONG}' -D__SVDLIBC_LONG_LONG='$cconfig{SVD_LONGLONG}'");
 
 ## $SVD_CFLAGS : additional compiler flags for SVDLIBC
 # + do *NOT* use -ffast-math !

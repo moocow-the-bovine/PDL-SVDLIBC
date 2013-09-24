@@ -2,7 +2,9 @@ ChangeLog for perl/PDL module PDL::SVDLIBC
 
 v0.07 Tue, 24 Sep 2013 14:30:46 +0200 moocow
 	+ PREREQ_PM{PDL}=CONFIGURE_REQUIRES{PDL}=0 for cpan-testers friendliness
-	+ added support for PDL_Indx datatype (PDL >= v2.007)
+	+ added (DISABLED) support for PDL_Indx datatype (PDL >= v2.007)
+	  - disabled by default since which(), whichND(), & co. don't return PDL_Indx in devel PDL-2.006_90
+	  - to enable, set $cconfig{ENABLE_PDL_INDX}=1 in Config.PL, run make realclean && perl Makefile.PL && ...
 
 v0.06 2013-06-19  moocow
 	+ include $Config{ccflags} explicitly to avoid errors like
