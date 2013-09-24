@@ -33,13 +33,15 @@ cprompt('SVD_SRCDIR', "SVDLIBC source directory", '../SVDLIBC');
 $cconfig{SVD_INC} = "-I.";
 
 ## $SVD_DEFS : additional defines for SVDLIBC
-cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG_LONG='long long' -D__SVDLIBC_LONG='int'");
+require PDL::Core;
+my ($LONG,$LONGLONG) = defined(&PDL::indx) ? ('PDL_Indx','PDL_Indx') : ('PDL_Long','PDL_LongLong');
+cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG='$LONG' -D__SVDLIBC_LONG_LONG='$LONGLONG'");
 
 ## $SVD_CFLAGS : additional compiler flags for SVDLIBC
 # + do *NOT* use -ffast-math !
-#cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "-O3 -pipe -march=prescott -mmmx -msse -msse2 -msse3 -mfpmath=sse");
 #cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "$ENV{CFLAGS}");
 #cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "-O2 -pipe");
+#cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", "-O3 -pipe -march=native -mtune=native -mfpmath=sse");
 cprompt('SVD_CFLAGS', "Additional compiler flags for SVDLIBC", $ENV{OPTIMIZE});
 
 ## $SVD_LDFLAGS : linker flags for SVDLIBC

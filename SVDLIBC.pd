@@ -1,11 +1,31 @@
-##-*- Mode: Perl -*-
+##-*- Mode: CPerl -*-
 
 ##======================================================================
 ## Header Administrivia
 ##======================================================================
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 pp_setversion($VERSION);
+
+##------------------------------------------------------
+## Header: PDL_Indx
+require PDL::Core;
+my ($INDX);
+if (defined(&PDL::indx)) {
+  #print STDERR "PDL >= v2.007 detected : using built-in PDL_Indx type\n";
+  $INDX = 'indx';
+  pp_addhdr("/* No PDL_Indx typedef needed for PDL >= v2.007 */\n");
+  pp_addpm("*svdlibc_indx = \&PDL::indx;\n");
+} else {
+  #print STDERR "PDL < v2.007 detected : using hacked PDL_Indx type\n";
+  $INDX = 'int';
+  $pindx = 'long';
+  pp_addhdr("/* PDL_Indx typedef hack for PDL < v2.007 */\n"
+	    ."typedef int PDL_Indx;\n"
+	   );
+  pp_addpm("*svdlibc_indx = \&PDL::long;\n");
+}
+
 
 ##------------------------------------------------------
 ## Header: pods
@@ -128,7 +148,7 @@ static void pp2pdl(int nrows, int ncols, double **pp, double *p)
 }
 
 /*--------------------------------------------------------------*/
-static void pp2pdl_int(int nrows, int ncols, int **pp, int *p)
+static void pp2pdl_indx(int nrows, int ncols, PDL_Indx **pp, PDL_Indx *p)
 {
   int i,j;
   for (i=0; i<nrows; i++) {
@@ -148,7 +168,7 @@ static void svdrec2pdls(SVDRec svdr, double *up, double *sp, double *vp)
 
 /*--------------------------------------------------------------*/
 #ifdef DEBUG_CODE
-static void showpp_int(const char *name, int nrows, int ncols, int **pp)
+static void showpp_indx(const char *name, int nrows, int ncols, PDL_Indx **pp)
 {
   int i,j;
   printf("\n");
@@ -283,7 +303,7 @@ EOPM
 pp_def
   ('_svdccsencode',
    #Pars=> q(double a(n,m); longlong [o]ptr(n1); longlong [o]rowids(nnz); double [o]nzvals(nnz)),
-   Pars => q(double a(n,m); int      [o]ptr(n1); int      [o]rowids(nnz); double [o]nzvals(nnz)),
+   Pars => qq(double a(n,m); $INDX\      [o]ptr(n1); $INDX\      [o]rowids(nnz); double [o]nzvals(nnz)),
    Code =>
 ('
   struct dmat dm;
@@ -298,9 +318,9 @@ pp_def
   sm = svdConvertDtoS(&dm);
 
   /*printf("pp2pdl()\n");*/
-  pp2pdl_int(1, $SIZE(n)+1, &sm->pointr, (int *)  $P(ptr));
-  pp2pdl_int(1, sm->vals,   &sm->rowind, (int *)  $P(rowids));
-  pp2pdl     (1, sm->vals,   &sm->value,  (double *)$P(nzvals));
+  pp2pdl_indx(1, $SIZE(n)+1, &sm->pointr, (PDL_Indx *) $P(ptr));
+  pp2pdl_indx(1, sm->vals,   &sm->rowind, (PDL_Indx *) $P(rowids));
+  pp2pdl     (1, sm->vals,   &sm->value,  (double   *) $P(nzvals));
 
   /*-- cleanup --*/
   /*printf("cleanup()\n");*/
@@ -321,10 +341,10 @@ pp_addpm(<<'EOPM');
 
 =for sig
 
-    int     ptr(nplus1);
-    int     rowids(nnz);
+    indx    ptr(nplus1);
+    indx    rowids(nnz);
     double  nzvals(nnz);
-    int     nrows();      ##-- default: max($rowids)+1
+    indx    nrows();      ##-- default: max($rowids)+1
     int     d();          ##-- default: nplus1-1
     int     iterations(); ##-- default: 2*$d
     double  end(2);       ##-- default: [-1e-30,1e-30]
@@ -403,16 +423,16 @@ pp_def
   ('svdlas2',
    Pars => join("\n    ",
 		'',
-		q(int     ptr(nplus1);),  ##-- longlong
-		q(int     rowids(nnz);),  ##-- longlong
-		q(double  nzvals(nnz);),
-		q(int     nrows();),
-		q(int     iterations();), ##-- longlong
-		q(double  end(2);),
-		q(double  kappa();),
-		q(double  [o]ut(m,d);),
-		q(double  [o] s(d);),
-		q(double  [o]vt(n,d);),
+		qq($INDX   ptr(nplus1);),  ##-- longlong
+		qq($INDX   rowids(nnz);),  ##-- longlong
+		qq(double  nzvals(nnz);),
+		qq($INDX   nrows();),	   ##-- longlong
+		qq(int     iterations();), ##-- longlong
+		qq(double  end(2);),
+		qq(double  kappa();),
+		qq(double  [o]ut(m,d);),
+		qq(double  [o] s(d);),
+		qq(double  [o]vt(n,d);),
 		'',
 	       ),
    Code =>
@@ -421,19 +441,19 @@ pp_def
   SVDRec svdr;
 
   /*-- setup sparse matrix --*/
-  sm.rows   = (int) $nrows();
-  sm.cols   = (int) $SIZE(n);
-  sm.vals   = (int) $SIZE(nnz);
-  sm.pointr = (int *)$P(ptr);
-  sm.rowind = (int *)$P(rowids);
+  sm.rows   = (PDL_Indx) $nrows();
+  sm.cols   = (PDL_Indx) $SIZE(n);
+  sm.vals   = (PDL_Indx) $SIZE(nnz);
+  sm.pointr = (PDL_Indx *)$P(ptr);
+  sm.rowind = (PDL_Indx *)$P(rowids);
   sm.value  = (double *)$P(nzvals);
 
   /*-- view decoded stuff --*/
 #ifdef DEBUG_CODE
   printf("sm: rows=%ld; cols=%ld; vals=%ld\n", sm.rows, sm.cols, sm.vals);
-  showpp_int("sm.pointr", 1, sm.cols+1,  &sm.pointr);
-  showpp_int("sm.rowind", 1, sm.vals,    &sm.rowind);
-  showpp_dbl("sm.value",  1, sm.vals,  &sm.value);
+  showpp_indx("sm.pointr", 1, sm.cols+1,  &sm.pointr);
+  showpp_indx("sm.rowind", 1, sm.vals,    &sm.rowind);
+  showpp_dbl ("sm.value",  1, sm.vals,  &sm.value);
   printf("--\n");
 #endif
 
