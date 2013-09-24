@@ -3,9 +3,17 @@ use ExtUtils::MakeMaker;
 
 ##-- read in user variables
 do "Config.PL";
-die("$0: 'do Config.PL' failed: $@") if ($@);
+die "$0: reading 'Config.PL' failed: $@" if ($@);
 
+##-- check for required SVDLIBC source directory
+foreach (map {"$cconfig{SVD_SRCDIR}/$_"} qw(svdutil.h svdutil.c svdlib.h svdlib.c las2.c)) {
+  if (!-e $_) {
+    warn "$0: could not find required SVDLIBC source file '$_', bailing out";
+    exit 0; ##-- exit with 0 status to appease cpan-testers (avoid FAIL reports)
+  }
+}
 
+##-- pdlmaker stuff
 PDL::Core::Dev->import();
 require "pdlmaker.plm";
 
