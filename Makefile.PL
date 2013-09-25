@@ -81,3 +81,6 @@ svdutil.h: \$(SVDLIBC)/svdutil.h
 
 "
 }
+
+##-- avoid applying 'processPL' rules to 'Config.PL'
+sub MY::processPL { return ''; }

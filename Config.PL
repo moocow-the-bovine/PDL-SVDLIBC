@@ -33,7 +33,9 @@ cprompt('SVD_SRCDIR', "SVDLIBC source directory", '../SVDLIBC');
 $cconfig{SVD_INC} = "-I.";
 
 ## $SVD_DEFS : additional defines for SVDLIBC
-cprompt("ENABLE_PDL_INDX", "Enable 64-bit PDL_Indx support if available (requires PDL >= v2.007)", "0");
+cprompt("ENABLE_PDL_INDX", "Enable 64-bit PDL_Indx support if available (requires PDL >= v2.007)", "y");
+$cconfig{ENABLE_PDL_INDX} = ($cconfig{ENABLE_PDL_INDX} && $cconfig{ENABLE_PDL_INDX} !~ /^[n0]/ ? 1 : 0);
+
 require PDL::Core;
 my ($LONG,$LONGLONG) = $cconfig{ENABLE_PDL_INDX} && defined(&PDL::indx) ? ('PDL_Indx','PDL_Indx') : ('PDL_Long','PDL_LongLong');
 cprompt('SVD_LONG',     "SVDLIBC long integer datatype", "$LONG");
