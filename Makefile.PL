@@ -22,7 +22,16 @@ $package = ["SVDLIBC.pd",SVDLIBC,PDL::SVDLIBC];
 
 $hash{AUTHOR} = 'Bryan Jurish';
 $hash{ABSTRACT} = 'PDL interface to Doug Rohde\'s SVD C Library';
-$hash{PREREQ_PM}{PDL} = $hash{CONFIGURE_REQUIRES}{PDL} = $hash{CONFIGURE_REQUIRES}{"ExtUtils::MakeMaker"} = 0;
+$hash{PREREQ_PM} = {
+		    PDL=>0,
+		   };
+$hash{CONFIGURE_REQUIRES} = {
+			     'PDL'=>0,
+			     'ExtUtils::MakeMaker'=>0,
+			     'Data::Dumper'=>0,
+			     'Archive::Tar'=>0,
+			     'File::Basename'=>0,
+			    };
 $hash{DIR} = [];
 $hash{VERSION_FROM} = 'SVDLIBC.pd';
 $hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache las2.c svdlib.c svdutil.c svdutil.h svdlib.h';

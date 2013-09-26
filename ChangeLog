@@ -1,5 +1,9 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.08 Thu, 26 Sep 2013 12:13:31 +0200 moocow
+	+ added auto-download and -unpack of SVDLIBC source to Config.PL
+	+ use ExtUtils::MakeMaker::prompt() for user prompts (fix RT #88972)
+
 v0.07 Tue, 24 Sep 2013 14:30:46 +0200 moocow
 	+ PREREQ_PM{PDL}=CONFIGURE_REQUIRES{PDL}=0 for cpan-testers friendliness
 	+ added (DISABLED) support for PDL_Indx datatype (PDL >= v2.007)

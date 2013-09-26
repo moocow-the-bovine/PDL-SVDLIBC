@@ -2,6 +2,8 @@
 \.gz$
 ^csizes
 ^pdlsizes
+^SVDLIBC$
+^svdlibc\.tgz$
 ^SVDLIBC\.pm$
 ^SVDLIBC\.xs$
 ^SVDLIBC\.c$
