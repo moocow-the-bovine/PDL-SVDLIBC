@@ -2,7 +2,7 @@
 ## Description: user variables for PDL::SVDLIBC package
 
 ##-- load cache
-if (0 && -e "./Config.cache") {
+if (-e "./Config.cache") {
   do "./Config.cache";
   if ($@) {
     warn("$0: could not load cache data from 'Config.cache': $@");
