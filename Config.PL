@@ -29,8 +29,9 @@ sub cprompt {
 #my $SVD_SRC0 = (grep {-d $_} qw(./SVDLIBC ../SVDLIBC))[0] // "http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz";
 my $SVD_SRCDIR  = 'SVDLIBC';
 my $SVD_SRCFILE = 'svdlibc.tgz';
-my $SVD_SRC0 = (#(grep {-d $_} qw(./SVDLIBC ../SVDLIBC)),
-		#(grep {-f $_} ($SVD_SRCFILE, 'svdlibc.tar.gz')),
+my $SVD_SRC0 = (
+		(grep {-d $_} qw(./SVDLIBC ../SVDLIBC)),
+		(grep {-f $_} ($SVD_SRCFILE, 'svdlibc.tar.gz')),
 		"http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz",
 	       )[0];
 my $SVD_SRC  = cprompt('SVD_SRC', "SVDLIBC source directory, archive, or URL", $SVD_SRC0);
