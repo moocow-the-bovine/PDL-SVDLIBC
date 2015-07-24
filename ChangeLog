@@ -1,5 +1,9 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.09 Fri, 24 Jul 2015 12:38:03 +0200 moocow
+	+ added las2.patch for upstream SVDLIBC sources
+	  - disable implicit matrix transposition in svdLAS2() at SVDLIBC/las2.c:373-378
+
 v0.08 Thu, 26 Sep 2013 12:13:31 +0200 moocow
 	+ added auto-download and -unpack of SVDLIBC source to Config.PL
 	+ use ExtUtils::MakeMaker::prompt() for user prompts (fix RT #88972)

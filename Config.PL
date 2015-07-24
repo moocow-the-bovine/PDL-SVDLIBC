@@ -29,8 +29,8 @@ sub cprompt {
 #my $SVD_SRC0 = (grep {-d $_} qw(./SVDLIBC ../SVDLIBC))[0] // "http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz";
 my $SVD_SRCDIR  = 'SVDLIBC';
 my $SVD_SRCFILE = 'svdlibc.tgz';
-my $SVD_SRC0 = ((grep {-d $_} qw(./SVDLIBC ../SVDLIBC)),
-		(grep {-f $_} ($SVD_SRCFILE, 'svdlibc.tar.gz')),
+my $SVD_SRC0 = (#(grep {-d $_} qw(./SVDLIBC ../SVDLIBC)),
+		#(grep {-f $_} ($SVD_SRCFILE, 'svdlibc.tar.gz')),
 		"http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz",
 	       )[0];
 my $SVD_SRC  = cprompt('SVD_SRC', "SVDLIBC source directory, archive, or URL", $SVD_SRC0);
@@ -61,8 +61,15 @@ if (-f $SVD_SRC) {
     or die("Error: SVDLIBC source archive $SVD_SRCFILE doesn't contain required file(s)");
   $tar->extract()
     or die("Error: failed to extract SVDLIBC source from $SVD_SRCFILE");
-  $cconfig{SVD_SRCDIR} = './SVDLIBC';
   print STDERR "success.\n";
+
+  ##-- patch upstream sources
+  print STDERR "Info: attempting to patch upstream SVDLIBC sources ...\n";
+  system("patch -i las2.patch -N SVDLIBC/las2.c")==0
+    or warn("Warning: failed to patch SVDLIBC/las2.c: segfaults may result");
+
+  $cconfig{SVD_SRCDIR} = './SVDLIBC';
+
 }
 
 ##-- sanity check
