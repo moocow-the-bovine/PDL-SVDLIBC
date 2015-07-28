@@ -72,23 +72,14 @@ sub MY::special_targets {
 
 ##-- SVDLIBC sources
 SVDLIBC = $main::cconfig{SVD_SRCDIR}
-
-las2.c: \$(SVDLIBC)/las2.c
-\t\$(PERL) hack-int-types.perl < \$< > \$@
-
-svdlib.c: \$(SVDLIBC)/svdlib.c
-\t\$(PERL) hack-int-types.perl < \$< > \$@
-
-svdutil.c: \$(SVDLIBC)/svdutil.c
-\t\$(PERL) hack-int-types.perl < \$< > \$@
-
-svdlib.h: \$(SVDLIBC)/svdlib.h
-\t\$(PERL) hack-int-types.perl < \$< > \$@
-
-svdutil.h: \$(SVDLIBC)/svdutil.h
-\t\$(PERL) hack-int-types.perl < \$< > \$@
+".join('',
+       map {
+	 "
+$_: \$(SVDLIBC)/$_
+\t\$(PERL) hack-int-types.perl < \$(SVDLIBC)/$_ > \$@
 
 "
+       } qw(las2.c svdlib.c svdlib.h svdutil.c svdutil.h));
 }
 
 ##-- avoid applying 'processPL' rules to 'Config.PL'

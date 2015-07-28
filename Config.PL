@@ -60,14 +60,22 @@ if (-f $SVD_SRC) {
     or die("Error: SVDLIBC source file $SVD_SRCFILE doesn't look like a tar archvie");
   $tar->contains_file('SVDLIBC/svdlib.h')
     or die("Error: SVDLIBC source archive $SVD_SRCFILE doesn't contain required file(s)");
+  foreach (grep {-f $_ || -l $_} $tar->list_files) {
+    unlink($_)
+      or die("Warning: failed to remove stale upstream source file $_");
+  }
   $tar->extract()
     or die("Error: failed to extract SVDLIBC source from $SVD_SRCFILE");
   print STDERR "success.\n";
 
   ##-- patch upstream sources
   print STDERR "Info: attempting to patch upstream SVDLIBC sources ...\n";
-  system("patch -i las2.patch -N SVDLIBC/las2.c")==0
-    or warn("Warning: failed to patch SVDLIBC/las2.c: segfaults may result");
+  my $rc = system("patch -i las2.patch -N SVDLIBC/las2.c");
+  if ($rc==0) {
+    print STDERR "Info: patch succeeded.\n";
+  } else {
+    warn("Warning: failed to patch SVDLIBC/las2.c: segfaults may result");
+  }
 
   $cconfig{SVD_SRCDIR} = './SVDLIBC';
 
@@ -139,7 +147,7 @@ sub get_url {
 
   ##-- curl
   print STDERR "+ Trying curl... ";
-  if (system('curl','-sS','-o',$outfile,$url)==0) {
+  if (0 && system('curl','-sS','-o',$outfile,$url)==0) {
     print STDERR "success.\n";
     return $outfile;
   }
@@ -147,27 +155,15 @@ sub get_url {
 
   ##-- wget
   print STDERR "+ Trying wget... ";
-  if (system('wget', '-nv', '-O',$outfile, $url)==0) {
+  if (0 && system('wget', '-nv', '-O',$outfile, $url)==0) {
     print STDERR "success.\n";
     return $outfile;
   }
   print STDERR "failed.\n";
 
-  ##-- lwp-request
-  my ($infh,$outfh);
-  my $rc = 'failed';
-  open($outfh,">$outfile") or die("open failed for $outfile: $!");
-  print STDERR "+ Trying lwp-request... ";
-  eval {
-    open($infh, "-|", 'lwp-request', $url) or die("lwp-request $url failed: $!");
-    print $outfh $_ while (defined($_=<$infh>));
-    $rc = 'success';
-  };
-  print STDERR "$rc.\n";
-  return $outfile if ($rc ne 'failed');
-
   ##-- try LWP::UserAgent
   print STDERR "+ Trying LWP::UserAgent... ";
+  my $rc = 'failed';
   eval "use LWP::UserAgent";
   if ($@) {
     print STDERR
@@ -181,7 +177,7 @@ sub get_url {
        " then run Makefile.PL again\n",
        "\n",
       );
-    exit;
+    exit 1;
   }
   my $ua = LWP::UserAgent->new;
   $ua->timeout(5);
@@ -189,12 +185,16 @@ sub get_url {
   my $response = $ua->get($url);
   if ($response->is_success) {
     print STDERR "success.\n";
+    open(my $outfh,">$outfile")
+      or die("Error: open failed for $outfile: $!");
     print $outfh $response->content;
+    close($outfh)
+      or die("Error: close failed for $outfile: $!");
     return $outfile;
   }
   else {
     die "LWP::UserAgent request aborted\n";
-    exit;
+    exit 1;
   }
 }
 
