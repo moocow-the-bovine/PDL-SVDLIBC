@@ -1,5 +1,8 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.11 Thu, 30 Jul 2015 09:37:16 +0200 moocow
+	+ Config.PL set binmode() on archive filehandle for LWP::UserAgent method (for win32)
+
 v0.10 Tue, 28 Jul 2015 09:13:34 +0200 moocow
 	+ Makefile calls to hack-int-types.perl tweaked for BSD variants
 	  - some cpantesters builds failed with 'Using $< in a non-suffix rule context is a GNUmake idiom (Makefile:367)'

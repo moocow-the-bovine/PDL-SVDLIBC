@@ -187,6 +187,7 @@ sub get_url {
     print STDERR "success.\n";
     open(my $outfh,">$outfile")
       or die("Error: open failed for $outfile: $!");
+    binmode($outfh); ##-- we might be win32
     print $outfh $response->content;
     close($outfh)
       or die("Error: close failed for $outfile: $!");
