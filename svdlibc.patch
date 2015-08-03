@@ -1,0 +1,37 @@
+diff -ur SVDLIBC/las2.c SVDLIBC/las2.c_new
+--- SVDLIBC/las2.c	2012-06-22 19:44:06.000000000 +0200
++++ SVDLIBC/las2.c_new	2015-08-03 09:03:56.000000000 +0200
+@@ -370,12 +370,17 @@
+   if (check_parameters(A, dimensions, iterations, end[0], end[1], TRUE))
+     return NULL;
+ 
++#if 0
++  /* Fri, 24 Jul 2015 11:31:27 +0200 moocow
++   *  + disable transposition for PDL::SVDLIBC, since we're getting segfaults whenever this code runs
++   */
+   /* If A is wide, the SVD is computed on its transpose for speed. */
+   if (A->cols >= A->rows * 1.2) {
+     if (SVDVerbosity > 0) printf("TRANSPOSING THE MATRIX FOR SPEED\n");
+     transpose = TRUE;
+     A = svdTransposeS(A);
+   }
++#endif
+ 
+   n = A->cols;
+   /* Compute machine precision */ 
+diff -ur SVDLIBC/svdutil.c SVDLIBC/svdutil.c_new
+--- SVDLIBC/svdutil.c	2012-06-22 18:47:42.000000000 +0200
++++ SVDLIBC/svdutil.c_new	2015-08-03 09:03:56.000000000 +0200
+@@ -37,7 +37,12 @@
+ #include <math.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
++#ifndef WIN32
++/* Mon, 03 Aug 2015 08:58:16 +0200 moocow
++ *  + disable netinet/in.h for win32 (why is it even here anyways?)
++ */
+ #include <netinet/in.h>
++#endif
+ #include "svdlib.h"
+ #include "svdutil.h"
+ 

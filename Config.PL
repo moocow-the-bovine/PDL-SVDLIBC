@@ -70,11 +70,11 @@ if (-f $SVD_SRC) {
 
   ##-- patch upstream sources
   print STDERR "Info: attempting to patch upstream SVDLIBC sources ...\n";
-  my $rc = system("patch -i las2.patch -N SVDLIBC/las2.c");
+  my $rc = system("patch -p0 -i svdlibc.patch -N");
   if ($rc==0) {
     print STDERR "Info: patch succeeded.\n";
   } else {
-    warn("Warning: failed to patch SVDLIBC/las2.c: segfaults may result");
+    warn("Warning: failed to patch upstream SVDLIBC sources: segfaults may result");
   }
 
   $cconfig{SVD_SRCDIR} = './SVDLIBC';

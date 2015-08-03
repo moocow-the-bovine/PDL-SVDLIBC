@@ -1,5 +1,10 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.13 Mon, 03 Aug 2015 09:22:03 +0200 moocow
+	+ patch upstream svdutil.c to disable #include <netinet/inet.h>
+	  - allowcpantesters win32 builds
+	  - it's totally unclear why <inet.h> is included in the first place
+
 v0.12 Sat, 01 Aug 2015 12:02:13 +0200 moocow
 	+ Config.PL don't quote typename macros (e.g. -D__SVDLIBC_LONG='PDL_Long'), for cpantesters/win32
 
