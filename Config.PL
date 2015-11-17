@@ -1,8 +1,8 @@
 ## File: PDL-SVDLIBC/Config.PL
 ## Description: user variables for PDL::SVDLIBC package
 
-##-- load cache
-if (-e "./Config.cache") {
+##-- load cache (disabling to see if this fixes cpantesters failures (v0.14, Tue, 17 Nov 2015 14:56:15 +0100)
+if (0 && -e "./Config.cache") {
   do "./Config.cache";
   if ($@) {
     warn("$0: could not load cache data from 'Config.cache': $@");
@@ -17,7 +17,7 @@ sub cprompt {
   my ($key, $msg, $default)=@_;
   return $cconfig{$key} if (defined($cconfig{$key}));
   $default = '' if (!defined($default)); 
- my $answer = ExtUtils::MakeMaker::prompt("<Config.PL> $msg [$default] ?");
+  my $answer = ExtUtils::MakeMaker::prompt("<Config.PL> $msg [$default] ?");
   chomp($answer);
   return $cconfig{$key} = ($answer eq '' ? $default : $answer);
 }
@@ -30,7 +30,8 @@ sub cprompt {
 my $SVD_SRCDIR  = 'SVDLIBC';
 my $SVD_SRCFILE = 'svdlibc.tgz';
 my $SVD_SRC0 = (
-		(grep {-d $_} qw(./SVDLIBC ../SVDLIBC)),
+		#(grep {-d $_} qw(./SVDLIBC ../SVDLIBC)), ##-- disable in-place SRCDIR to see if that helps cpantesters failures (v0.14, Tue, 17 Nov 2015 14:55:43 +0100)
+		#(grep {-d $_} qw(../SVDLIBC)), ##-- debug
 		(grep {-f $_} ($SVD_SRCFILE, 'svdlibc.tar.gz')),
 		"http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz",
 	       )[0];

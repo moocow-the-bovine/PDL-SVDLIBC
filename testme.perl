@@ -1,4 +1,4 @@
-#!/usr/bin/perl -wd
+#!/usr/bin/perl -w
 
 use lib qw(./blib/lib ./blib/arch);
 use PDL;
@@ -8,11 +8,16 @@ use PDL::MatrixOps;
 
 use Benchmark qw(timethese cmpthese);
 
-BEGIN{ $, = ' '; $eps=1e-6; }
+use vars qw($eps $test_a);
+BEGIN{
+  $, = ' ';
+  $eps=1e-6;
+  #$test_a = 1; ##-- test convenience wrappers?
+}
 
 ##---------------------------------------------------------------------
 ## test: data
-use vars qw($p $ptr $rowids $nzvals $a);
+use vars qw($p $whichi $whichv $ptr $rowids $nzvals $a);
 sub tdata {
   $p = $a = pdl(double, [
 			 [10,0,0,0,-2,0,0],
@@ -50,10 +55,16 @@ sub gendatag {
 ##-- update cccs on changed $p
 sub udata {
   ($n,$m) = $p->dims;
+  ##
   ##-- ccs encode
   ($ptr,$rowids,$nzvals) = ccsencode($p);
   #$ptr = $ptr->convert(longlong);
   #$rowids = $rowids->convert(longlong);
+  ##
+  ##-- dok encode
+  $whichi = $p->whichND->vv_qsortvec;
+  $whichv = $p->indexND($whichi);
+  ##
   ##-- HACK: allocate an extra slot in $ptr
   $ptr->reshape($ptr->nelem+1);
   $ptr->set(-1, $rowids->nelem);
@@ -73,43 +84,99 @@ use vars qw($iters $end $kappa $ut $ul $ssl $vt $vl $pbr $pbri);
 sub tlas2 {
   #$d=4;
   tdata() if (!defined($p));
-
   $d = $p->dim(0);
-  svdlas2($ptr,$rowids,$nzvals, $m,
-	  ($iters=pdl(14)),
-	  ($end=pdl(double,[-1e-30,1e-30])),
-	  ($kappa=pdl(1e-6)),
-	  ($u2t = $u2t = zeroes(double,$m,$d)),
-	  ($s2  = $s2  = zeroes(double,$d)),
-	  ($v2t = $v2t = zeroes(double,$n,$d)), ##-- $d-by-$n
-	 );
+
+  #$test_a=1;
+  if ($test_a) {
+    ##-- convenience method
+    ($u2t,$s2,$v2t) = svdlas2a($ptr,$rowids,$nzvals);
+  } else {
+    ##-- guts
+    svdlas2($ptr,$rowids,$nzvals, $m,
+	    ($iters=pdl(14)),
+	    ($end=pdl(double,[-1e-30,1e-30])),
+	    ($kappa=pdl(1e-6)),
+	    ($u2t = $u2t = zeroes(double,$m,$d)),
+	    ($s2  = $s2  = zeroes(double,$d)),
+	    ($v2t = $v2t = zeroes(double,$n,$d)), ##-- $d-by-$n
+	   );
+    ## u2t(m=6,d=7), s2(d=7), v2t(n=7,d=7)
+  }
 
   ##-- stretch, tranpose
   use vars qw($s2s);
   $u2  = $u  = $u2t->xchg(0,1);
   $s2s = $ss = stretcher($s2);
   $v2  = $v  = $v2t->xchg(0,1);
+  tcheck('las2', $u2, $s2, $v2);
+  return;
 }
 #tlas2();
+
+use vars qw($uwt $sw $vwt $uw $ssw $vw);
+sub tlas2w {
+  #$d=4;
+  tdata() if (!defined($p));
+  $d = $p->dim(0);
+
+  $test_a=1;
+  if ($test_a) {
+    ##-- convenience method
+    ($uwt,$sw,$vwt) = svdlas2aw($whichi,$whichv);
+  } else {
+    ##-- guts
+    svdlas2w($whichi->xchg(0,1),$whichv, $n,$m,
+	    ($iters=pdl(14)),
+	    ($end=pdl(double,[-1e-30,1e-30])),
+	    ($kappa=pdl(1e-6)),
+	    ($uwt = zeroes(double,$m,$d)),
+	    ($sw  = zeroes(double,$d)),
+	    ($vwt = zeroes(double,$n,$d)), ##-- $d-by-$n
+	   );
+    ## uwt(m=6,d=7), sw(d=7), vwt(n=7,d=7)
+  }
+
+  ##-- stretch, tranpose
+  use vars qw($s2s);
+  $uw  = $uwt->xchg(0,1);
+  $ssw = stretcher($sw);
+  $vw  = $vwt->xchg(0,1);
+  tcheck('las2w', $uw, $sw, $vw);
+  return;
+}
+tlas2w();
 
 
 use vars qw($udt $ud $sd $ssd $vdt $vd);
 sub tlas2d { #-- ok
+  tdata() if (!defined($p));
   $d = $p->dim(0);
-  svdlas2d($p,
-	  ($iters=pdl(14)),
-	  ($end=pdl(double,[-1e-30,1e-30])),
-	  ($kappa=pdl(1e-6)),
-	  ($udt = $ut = zeroes(double,$m,$d)),
-	  ($sd  = $s  = zeroes(double,$d)),
-	  ($vdt = $vt = zeroes(double,$n,$n)),
-	 );
+
+  #$test_a=1;
+  if ($test_a) {
+    ##-- convenience wrappers
+    ($udt,$sd,$vdt) = svdlas2ad($p);
+  } else {
+    ##-- guts
+    svdlas2d($p,
+	     ($iters=pdl(14)),
+	     ($end=pdl(double,[-1e-30,1e-30])),
+	     ($kappa=pdl(1e-6)),
+	     ($udt = $ut = zeroes(double,$m,$d)),
+	     ($sd  = $s  = zeroes(double,$d)),
+	     ($vdt = $vt = zeroes(double,$n,$d)),
+	    );
+    ## udt(m=6,d=7), sd(d=7), vdt(n=7,d=7)
+  }
 
   ##-- stretch, tranpose
   $ud  = $u  = $udt->xchg(0,1);
   $vd  = $v  = $vdt->xchg(0,1);
   $ssd = $ss = stretcher($sd);
+  tcheck('las2d', $u, $sd, $v);
+  return;
 }
+#tlas2d();
 
 sub tbuiltin {
   ##-- test: compare w/ builtin svd
@@ -261,7 +328,7 @@ sub checkallr {
   tlas2r;
   tcheckr('las2', $u2r, $s2r, $v2r);
 }
-checkallr;
+#checkallr;
 
 
 ##---------------------------------------------------------------------

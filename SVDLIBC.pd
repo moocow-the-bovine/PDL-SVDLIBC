@@ -4,7 +4,7 @@
 ## Header Administrivia
 ##======================================================================
 
-our $VERSION = "0.13";
+our $VERSION = "0.14";
 pp_setversion($VERSION);
 
 do "./Config.cache";
@@ -54,7 +54,7 @@ PDL::SVDLIBC - PDL interface to Doug Rohde's SVD C Library
  $d  = $n;                   ##-- max number of output dimensions
  $ut = zeroes(double,$m,$d); ##-- left singular components
  $s  = zeroes(double,$d);    ##-- singular values (diagnonal vector)
- $vt = zeroes(double,$n,$n); ##-- right singular components
+ $vt = zeroes(double,$n,$d); ##-- right singular components
 
  ##---------------------------------------------------------------------
  ## Singular Value Decomposition (dense)
@@ -62,7 +62,15 @@ PDL::SVDLIBC - PDL interface to Doug Rohde's SVD C Library
  svdlas2d($a, $maxiters, $end, $kappa, $ut, $s, $vt);
 
  ##---------------------------------------------------------------------
- ## Singular Value Decomposition (sparse)
+ ## Singular Value Decomposition (sparse, using direct whichND()-encoding)
+ ##---------------------------------------------------------------------
+ $which  = whichND($a)->qsortvec();
+ $nzvals = indexND($a,$which);
+
+ svdlas2w($which, $nzvals, $n, $m, $maxiters, $end, $kappa, $ut, $s, $vt);
+
+ ##---------------------------------------------------------------------
+ ## Singular Value Decomposition (sparse, using PDL::CCS encoding)
  ##---------------------------------------------------------------------
  use PDL::CCS;
  ($ptr,$rowids,$nzvals) = ccsencode($a);
@@ -214,6 +222,8 @@ EOB
 ## SVDLIBC globals
 pp_addpm(<<'EOPM');
 
+use strict;
+
 =pod
 
 =head1 SVDLIBC Globals
@@ -331,7 +341,7 @@ pp_def
 #pp_add_exported('', 'svdccsencode');
 
 ##------------------------------------------------------
-## svdlas2a() : singular value decomposition (convenience)
+## svdlas2a() : singular value decomposition (sparse, ccs, convenience)
 pp_add_exported('','svdlas2a');
 pp_addpm(<<'EOPM');
 
@@ -344,8 +354,8 @@ pp_addpm(<<'EOPM');
     indx    ptr(nplus1);
     indx    rowids(nnz);
     double  nzvals(nnz);
-    indx    nrows();      ##-- default: max($rowids)+1
-    int     d();          ##-- default: nplus1-1
+    indx    m();          ##-- default: max($rowids)+1
+    int     d();          ##-- default: max(nplus1-1,m)
     int     iterations(); ##-- default: 2*$d
     double  end(2);       ##-- default: [-1e-30,1e-30]
     double  kappa();      ##-- default: 1e-6
@@ -355,7 +365,7 @@ pp_addpm(<<'EOPM');
 
 Uses a variant of the single-vector Lanczos method (Lanczos, 1950)
 to compute the singular value decomposition of a sparse matrix with
-$nrows() rows and data encoded
+$m() rows and data encoded
 in Harwell-Boeing sparse format in the input parameters $ptr(), $rowids(),
 and $nzvals().  See L<"PDL::CCS"> for a way to acquire these parameters
 from a dense input matrix, but note that for svdlas2(), the
@@ -386,31 +396,35 @@ values may be relatively imprecise, but that is not a problem for most
 users who only want the higher-order values or who can tolerate some
 imprecision.
 
-See also: svdlas2d()
+See also: svdlas2aw(), svdlas2d()
 
 =cut
 
-## ($iters,$end,$kappa,$ut,$s,$vt) = svddefaults($nrows,$ncols,$d, $iters,...)
+## ($iters,$end,$kappa,$ut,$s,$vt) = svddefaults($n=$nrows,$m=$ncols,$d, $iters,...)
 ## + returns default values
+## + changed calling conventions in v0.14
+##   - WAS: svddefaults($nrows,$cols, $d,$iters,...) ##-- SVDLIBC-style (col-primary)
+##        ~ svddefaults($m,    $n,    $d,$iters,...) ##-- SVDLIBC-style (for dense $a(n,m))
+##   - NOW: svddefaults($n,    $m,    $d,$iters,...) ##-- pdl-style
 sub svddefaults {
-    my ($nrows,$ncols,$d, $iters,$end,$kappa,$ut,$s,$vt) = @_;
-    $nrows = $nrows->at(0) if (UNIVERSAL::isa($nrows,'PDL'));
-    $ncols = $ncols->at(0) if (UNIVERSAL::isa($ncols,'PDL'));
-    $d     = $ncols if (!defined($d));
+    my ($n,$m,$d, $iters,$end,$kappa,$ut,$s,$vt) = @_;
+    $n     = $n->at(0) if (UNIVERSAL::isa($n,'PDL'));
+    $m     = $m->at(0) if (UNIVERSAL::isa($m,'PDL'));
+    $d     = ($n >= $m ? $n : $m) if (!defined($d));
     $iters = 2*$d if (!defined($iters));
     $end   = pdl(double,[-1e-30,1e-30]) if (!defined($end));
     $kappa = pdl(double,1e-6) if (!defined($kappa));
-    $ut    = PDL->zeroes(double,$nrows,$d) if (!defined($ut));
-    $s     = PDL->zeroes(double,$d) if (!defined($s));
-    $vt    = PDL->zeroes(double,$ncols,$d) if (!defined($vt));
+    $ut    = PDL->zeroes(double,$m,$d) if (!defined($ut));
+    $s     = PDL->zeroes(double,   $d) if (!defined($s));
+    $vt    = PDL->zeroes(double,$n,$d) if (!defined($vt));
     return ($iters,$end,$kappa,$ut,$s,$vt);
 }
 
 sub svdlas2a {
-    my ($ptr,$rowids,$nzvals, $nrows,$d, @args) = @_;
-    $nrows = $rowids->flat->max+1 if (!defined($nrows));
-    @args = svddefaults($ptr->dim(0)-1,$nrows,$d,@args);
-    svdlas2($ptr,$ropwids,$nzvals,$nrows,@args);
+    my ($ptr,$rowids,$nzvals, $m,$d, @args) = @_;
+    $m = $rowids->flat->max+1 if (!defined($m));
+    @args  = svddefaults($ptr->dim(0)-1,$m,$d,@args);
+    svdlas2($ptr,$rowids,$nzvals,$m,@args);
     return @args[3..5];
 }
 
@@ -418,7 +432,7 @@ EOPM
 
 
 ##------------------------------------------------------
-## svdLAS2() : singular value decomposition (low-level)
+## svdLAS2() : singular value decomposition (sparse, ccs, low-level)
 pp_def
   ('svdlas2',
    Pars => join("\n    ",
@@ -426,7 +440,7 @@ pp_def
 		qq($INDX   ptr(nplus1);),  ##-- longlong
 		qq($INDX   rowids(nnz);),  ##-- longlong
 		qq(double  nzvals(nnz);),
-		qq($INDX   nrows();),	   ##-- longlong
+		qq($INDX   m();),	   ##-- longlong
 		qq(int     iterations();), ##-- longlong
 		qq(double  end(2);),
 		qq(double  kappa();),
@@ -441,7 +455,7 @@ pp_def
   SVDRec svdr;
 
   /*-- setup sparse matrix --*/
-  sm.rows   = (__SVDLIBC_LONG) $nrows();
+  sm.rows   = (__SVDLIBC_LONG) $m();
   sm.cols   = (__SVDLIBC_LONG) $SIZE(n);
   sm.vals   = (__SVDLIBC_LONG) $SIZE(nnz);
   sm.pointr = (__SVDLIBC_LONG *)$P(ptr);
@@ -487,6 +501,127 @@ No default instantiation, and slightly different calling conventions.
 #pp_add_exported('', 'svdlas2');
 
 
+##------------------------------------------------------
+## svdlas2aw() : singular value decomposition (sparse, whichND, convenience)
+
+pp_add_exported('','svdlas2aw');
+pp_addpm(<<'EOPM');
+
+=pod
+
+=head2 svdlas2aw
+
+=for sig
+
+    indx    which(nnz,2); ##-- sorted indices of non-zero values
+    double  nzvals(nnz);  ##-- non-zero values
+    indx    n();          ##-- default: max($indx(0,:))+1
+    indx    m();          ##-- default: max($indx(1,:))+1
+    int     d();          ##-- default: max(n,m)
+    int     iterations(); ##-- default: 2*$d
+    double  end(2);       ##-- default: [-1e-30,1e-30]
+    double  kappa();      ##-- default: 1e-6
+    double  [o]ut(m,d);   ##-- default: new
+    double  [o] s(d);     ##-- default: new
+    double  [o]vt(n,d);   ##-- default: new
+
+As for svdlas2a(), but implicitly converts the index-encoded matrix
+($which(),$nzvals()) to an internal CCS-like sparse format
+before computing the decomposition.
+Should be slightly more efficient than using PDL::CCS::ccsencode()
+or similar if you already have $which() and $nzvals() available.
+These can be attained for a dense matric $a() e.g. by:
+
+ $which  = $a->whichND->qsortvec->xchg(0,1);
+ $nzvals = $a->indexND($which->xchg(0,1));
+
+See also: svdlas2a(), svdlas2d()
+
+=cut
+
+sub svdlas2aw {
+    my ($which,$nzvals, $n,$m,$d, @args) = @_;
+    $which = $which->xchg(0,1) if ($which->dim(1) > $which->dim(0));
+    $n    = $which->slice(":,0")->max+1 if (!defined($n));
+    $m    = $which->slice(":,1")->max+1 if (!defined($m));
+    @args = svddefaults($n,$m,$d,@args);
+    svdlas2w($which,$nzvals,$n,$m,@args);
+    return @args[3..5];
+}
+
+EOPM
+
+##------------------------------------------------------
+## svdlas2w() : singular value decomposition (sparse, whichND, low-level)
+pp_def
+  ('svdlas2w',
+   Pars => join("\n    ",
+		'',
+		qq($INDX   whichi(nnz,Two);),  ##-- longlong
+		qq(double  nzvals(nnz);),
+		qq($INDX   n();),	     ##-- longlong
+		qq($INDX   m();),	     ##-- longlong
+		qq(int     iterations();),   ##-- longlong
+		qq(double  end(2);),
+		qq(double  kappa();),
+		qq(double  [o]ut(m,d);),
+		qq(double  [o] s(d);),
+		qq(double  [o]vt(n,d);),
+		'',
+	       ),
+   Code =>
+('
+  struct smat sm;
+  SVDRec svdr;
+  __SVDLIBC_LONG ci,nzi,nzc, dimN=$n();
+
+  /*-- setup sparse matrix --*/
+  sm.rows   = (__SVDLIBC_LONG) $m();
+  sm.cols   = (__SVDLIBC_LONG) $n();
+  sm.vals   = (__SVDLIBC_LONG) $SIZE(nnz);
+  sm.rowind = (__SVDLIBC_LONG *) ($P(whichi) + $SIZE(nnz));
+  sm.value  = (double *) $P(nzvals);
+
+  /*-- ensure sorted whichi() --*/
+  for (ci=0,nzi=0; nzi < $SIZE(nnz); ++nzi) {
+    nzc = $whichi(nnz=>nzi,Two=>0);
+    if ( nzc < ci )
+      croak("svdlas2w(): input indices whichi() are not sorted at nzi=%ld, nzc=%ld, current ci=%ld!", nzi, nzc, ci);
+    ci = nzc;
+  }
+
+  /*-- construct ptr() --*/
+  sm.pointr = (__SVDLIBC_LONG *) malloc((1+dimN)*sizeof(__SVDLIBC_LONG));
+  for (ci=0,nzi=0; nzi < $SIZE(nnz); ++nzi) {
+    nzc = $whichi(nnz=>nzi,Two=>0);
+    for ( ; ci <= nzc; ++ci) {
+      sm.pointr[ci] = nzi;
+    }
+  }
+  for ( ; ci <= dimN; ++ci) {
+    sm.pointr[ci] = $SIZE(nnz);
+  }
+
+  /*-- run SVD --*/
+  svdr = svdLAS2(&sm, $SIZE(d), $iterations(), $P(end), $kappa());
+  svdrec2pdls(svdr, $P(ut), $P(s), $P(vt));
+
+  /*-- pre-cleanup --*/
+  if (sm.pointr) free(sm.pointr);
+  sm.pointr = NULL;
+  sm.rowind = NULL;
+  sm.value  = NULL;
+
+  /*-- cleanup --*/
+  if (svdr) svdFreeSVDRec(svdr);
+'),
+   Doc =>
+q(
+Guts for svdlas2a().
+No default instantiation, and slightly different calling conventions.
+),
+);
+#pp_add_exported('', 'svdlas2w');
 
 ##------------------------------------------------------
 ## svdlas2ad() : singular value decomposition (dense): convenience
@@ -500,7 +635,7 @@ pp_addpm(<<'EOPM');
 =for sig
 
     double  a(n,m);
-    int     d();          ##-- default: $n
+    int     d();          ##-- default: max($n,$m)
     int     iterations(); ##-- default: 2*$d
     double  end(2);       ##-- default: [-1e-30,1e-30]
     double  kappa();      ##-- default: 1e-6
@@ -515,7 +650,7 @@ $a() to sparse format before computing the decomposition.
 
 sub svdlas2ad {
     my ($a,$d, @args) = @_;
-    @args = svddefaults($a->dim(1),$a->dim(0),$d,@args);
+    @args = svddefaults($a->dim(0),$a->dim(1),$d,@args);
     svdlas2d($a,@args);
     return @args[3..5];
 }
@@ -610,7 +745,7 @@ Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
 =head2 Copyright Policy
 
-Copyright (C) 2005-2013, Bryan Jurish. All rights reserved.
+Copyright (C) 2005-2015, Bryan Jurish. All rights reserved.
 
 This package is free software, and entirely without warranty.
 You may redistribute it and/or modify it under the same terms

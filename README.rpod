@@ -10,7 +10,7 @@ PDL::SVDLIBC - PDL interface to Doug Rohde's SVD C Library
 
 =over 4
 
-=item * PDL
+=item PDL
 
 Tested versions 2.4.2, 2.4.3, 2.4.7_001, 2.4.9, 2.4.9_015.
 

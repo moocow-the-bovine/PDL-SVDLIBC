@@ -10,7 +10,7 @@ do "$TEST_DIR/common.plt";
 use PDL;
 use PDL::SVDLIBC;
 
-BEGIN { plan tests=>6, todo=>[]; }
+BEGIN { plan tests=>20, todo=>[]; }
 
 ##-- setup
 $a = pdl(double,
@@ -28,61 +28,95 @@ $nzvals=pdl(double,[10,3,3,9,7,8,4,8,8,7,7,9,-2,5,9,2,3,13,-1,1,1,1]);
 ($n,$m) = $a->dims;
 
 
-
 ##-- common pars
 $iters = pdl(long,14);
 $end   = pdl(double,[-1e-30,1e-30]);
 $kappa = pdl(double,1e-6);
 
+sub svdcompose {
+  my ($ut,$s,$vt) = @_;
+  #return $ut->xchg(0,1) x stretcher($s) x $vt;   ##-- by definition
+  return ($ut->xchg(0,1) * $s)->matmult($vt);    ##-- pdl-ized, more efficient
+}
+
 ##-- $d==$n: expect
-$d = $n;
-
-$ut_want =
-  pdl(double,
-      [[0.000536870080275633,0.272178136497484,0.402223741637742,0.342152709202008,0.79777433508708,0.103065364251536],
-       [0.28527967615187,-0.101703564414206,0.539263413191387,0.608398065357372,-0.497242386011596,-0.00828650566923618],
-       [0.769356159612389,0.57278591222696,-0.0758981711367609,-0.248163283906345,-0.0632588945976401,0.0930599957769441],
-       [0.472065824089417,-0.458560287003903,-0.509978454684947,0.383227968381176,0.285120934392026,-0.280429445117102],
-       [-0.14350173411983,0.181133269960328,-0.451985822294512,0.418727072563739,-0.10964420848225,0.744951403456183],
-       [0.28856096035857,-0.586860245243611,0.277995130671446,-0.359168853225782,0.137799246742958,0.589114109915952],
-       [0,0,0,0,0,0]]);
-
-$vt_want =
-  pdl(double,
-      [[0.0792510967013729,0.517073465756313,0.255329527055914,0.531264640948551,0.389994814017901,0.475265099143429,0.030759374976173],
-       [0.337930883175723,-0.0889921877945774,0.709519096957111,0.274992613247936,-0.156128150575161,-0.522479963841427,0.0385163653800307],
-       [0.78833914428785,0.408380265790316,-0.235798012061466,-0.258106221868997,-0.287664388100387,0.073030050581229,0.0379899903637539],
-       [0.494549455431307,-0.719339483237642,-0.1115712708961,0.184722915705758,0.327586707049301,0.287324708955066,-0.0391446152142804],
-       [0.0948079103988546,0.147960483656045,-0.0691937827562251,-0.317169803014294,0.749942274518314,-0.42309612560424,0.349729817537494],
-       [0.0411788312667813,0.106645671467875,-0.562706510404694,0.582278834218919,0.0393876958323224,-0.483779794610716,-0.30927247974065],
-       [0,0,0,0,0,0,0]]);
+$d  = $n;
+$d1 = $n-2;
 
 $s_want = pdl(double,
 	      [23.32284744104,12.9401616781924,10.9945440916999,9.08839598479768,3.84528764361343,1.1540470359863,0]);
+$s1_want = $s_want->slice("0:".($d1-1));
 
 
-##-- test 1..3 : svdlas2
+##-- test 1..2 : svdlas2, d=n
 svdlas2($ptr,$rowids,$nzvals, $m,
 	$iters, $end, $kappa,
 	($ut=zeroes(double,$m,$d)),
 	($s=zeroes(double,$d)),
 	($vt=zeroes(double,$d,$n)),
        );
-isok("svdlas2,d=n:ut", all($ut->approx($ut_want)));
-isok("svdlas2,d=n:s", all($s->approx($s_want)));
-isok("svdlas2,d=n:vt", all($s->approx($vt_want)));
+isok("svdlas2,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2,d=n:data", all(svdcompose($ut,$s,$vt)->approx($a)));
+
+##-- test 3..4 : svdlas2a, d=n
+($ut,$s,$vt) = svdlas2a($ptr,$rowids,$nzvals);
+isok("svdlas2a,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2a,d=n:data", all(svdcompose($ut,$s,$vt)->approx($a)));
+
+##-- test 5..6 : svdlas2a, d<n
+($ut,$s,$vt) = svdlas2a($ptr,$rowids,$nzvals, $m,$d1);
+isok("svdlas2a,d<n:s",    all($s->approx($s1_want)));
+isok("svdlas2a,d<n:data", all(svdcompose($ut,$s,$vt)->approx($a,0.5)));
+
+##-- test 7..8 : svdlas2w, d=n
+my $whichi = $a->whichND->qsortvec->xchg(0,1);
+my $whichv = $a->indexND($whichi->xchg(0,1));
+svdlas2w($whichi,$whichv, $n,$m,
+	 $iters, $end, $kappa,
+	 ($ut=zeroes(double,$m,$d)),
+	 ($s=zeroes(double,$d)),
+	 ($vt=zeroes(double,$d,$n)),
+	);
+isok("svdlas2w,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2w,d=n:data", all(svdcompose($ut,$s,$vt)->approx($a)));
+
+##-- test 9..10 : svdlas2aw, d=n
+($ut,$s,$vt) = svdlas2aw($whichi,$whichv);
+isok("svdlas2aw,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2aw,d=n:data", all(svdcompose($ut,$s,$vt)->approx($a)));
+
+##-- test 11..12 : svdlas2aw, d<n
+($ut,$s,$vt) = svdlas2aw($whichi,$whichv, $n,$m,$d1);
+isok("svdlas2aw,d<n:s",    all($s->approx($s1_want)));
+isok("svdlas2aw,d<n:data", all(svdcompose($ut,$s,$vt)->approx($a,0.5)));
+
+##-- test 13..14 : svdlas2aw, d=n, transpsosed whichND
+$whichi = $a->whichND->qsortvec;
+$whichv = $a->indexND($whichi);
+($ut,$s,$vt) = svdlas2aw($whichi,$whichv);
+isok("svdlas2aw,whichT,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2aw,whichT,d=n:data", all(svdcompose($ut,$s,$vt)->approx($a)));
 
 
-##-- test 4..6 : svdlas2d
+##-- test 15..16 : svdlas2d, d=n
 svdlas2d($a,
 	 $iters, $end, $kappa,
 	 ($ut=zeroes(double,$m,$d)),
 	 ($s=zeroes(double,$d)),
 	 ($vt=zeroes(double,$d,$n)),
 	);
-isok("svdlas2d,d=n:ut", all($ut->approx($ut_want)));
-isok("svdlas2d,d=n:s",  all($s->approx($s_want)));
-isok("svdlas2d,d=n:vt", all($s->approx($vt_want)));
+isok("svdlas2d,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2d,d=n:data", all(approx($ut->xchg(0,1) x stretcher($s) x $vt, $a)));
+
+##-- test 17..18 : svdlas2ad
+($ut,$s,$vt) = svdlas2ad($a);
+isok("svdlas2ad,d=n:s",    all($s->approx($s_want)));
+isok("svdlas2ad,d=n:data", all(approx($ut->xchg(0,1) x stretcher($s) x $vt, $a)));
+
+##-- test 19..20 : svdlas2ad, d<n
+($ut,$s,$vt) = svdlas2ad($a,$d1);
+isok("svdlas2a,d<n:s",    all($s->approx($s1_want)));
+isok("svdlas2a,d<n:data", all(svdcompose($ut,$s,$vt)->approx($a,0.5)));
 
 
 print "\n";
