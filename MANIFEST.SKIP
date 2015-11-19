@@ -3,6 +3,7 @@
 \.gz$
 ^csizes
 ^pdlsizes
+^SVDLIBC\/Manual\/svdlib\.h$	#-- symlink
 ^SVDLIBC\.orig\b
 ^svdlibc\.tgz$
 ^SVDLIBC\.pm$

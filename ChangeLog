@@ -1,5 +1,10 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.15 Thu, 19 Nov 2015 09:24:00 +0100 moocow
+	+ still no joy with v0.14 cpan smoker hacks on win32
+	  - see http://www.cpantesters.org/cpan/report/6e49170d-6bf5-1014-a25c-daa0d353e6bb (UNKNOWN)
+	+ packaging SVDLIBC sources (BSD-like license) into perl distro
+
 v0.14 Tue, 17 Nov 2015 14:52:16 +0100 moocow
 	+ v0.13 inet.h patch strategy seems still not to be catching
 	  - see e.g. http://www.cpantesters.org/cpan/report/6c6dcdff-6c03-1014-8ce0-5f22b8efd73c
