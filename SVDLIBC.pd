@@ -4,7 +4,7 @@
 ## Header Administrivia
 ##======================================================================
 
-our $VERSION = "0.14";
+our $VERSION = "0.15";
 pp_setversion($VERSION);
 
 do "./Config.cache";
@@ -720,7 +720,7 @@ Perl by Larry Wall.
 
 PDL by Karl Glazebrook, Tuomas J. Lukka, Christian Soeller, and others.
 
-SVDLIBC by Dough Rohde.
+SVDLIBC by Dough Rohde; available at http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz
 
 SVDPACKC by Michael Berry, Theresa Do, Gavin O'Brien, Vijay Krishna and Sowmini Varadhan.
 
@@ -743,13 +743,19 @@ Globals still lurk in the depths of SVDLIBC.
 
 Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
-=head2 Copyright Policy
+=head1 COPYRIGHT AND LICESNSE
 
-Copyright (C) 2005-2015, Bryan Jurish. All rights reserved.
+Copyright (c) 2005-2015, Bryan Jurish.  All rights reserved.
 
 This package is free software, and entirely without warranty.
 You may redistribute it and/or modify it under the same terms
-as Perl itself.
+as Perl itself, either 5.20.2 or any newer version of Perl 5
+you have available.
+
+The SVDLIBC sources included in this distribution are themselves
+released under a BSD-like license. See the file
+F<SVDLIBC/Manual/license.html> in the PDL-SVDLIBC source distribution
+for details.
 
 =head1 SEE ALSO
 

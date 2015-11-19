@@ -29,12 +29,11 @@ $hash{CONFIGURE_REQUIRES} = {
 			     'PDL'=>0,
 			     'ExtUtils::MakeMaker'=>0,
 			     'Data::Dumper'=>0,
-			     'Archive::Tar'=>0,
-			     'File::Basename'=>0,
 			    };
 $hash{DIR} = [];
 $hash{VERSION_FROM} = 'SVDLIBC.pd';
-$hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache las2.c svdlib.c svdutil.c svdutil.h svdlib.h';
+$hash{clean}{FILES} .= 'las2.c svdlib.c svdutil.c svdutil.h svdlib.h';
+$hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache';
 
 push(@{$hash{LIBS}},    ' '.$cconfig{SVD_LIBS});
 $hash{INC}           .= ' '.$cconfig{SVD_INC};
@@ -45,8 +44,7 @@ $hash{OPTIMIZE}      .= ' '.$cconfig{SVD_CFLAGS};
 ## t/00_basic.t .. Not a CODE reference at /usr/lib/perl/5.14/DynaLoader.pm line 207.
 use Config;
 $hash{CCFLAGS}       .= " $Config{ccflags} ".$cconfig{SVD_DEFS};
-
-$hash{OBJECT}         .= ' las2.o svdlib.o svdutil.o';
+$hash{OBJECT}        .= ' las2.o svdlib.o svdutil.o';
 
 
 WriteMakefile(%hash);
@@ -77,6 +75,9 @@ SVDLIBC = $main::cconfig{SVD_SRCDIR}
 	 "
 $_: \$(SVDLIBC)/$_
 \t\$(PERL) hack-int-types.perl < \$(SVDLIBC)/$_ > \$@
+
+##-- readme
+readme: README.txt
 
 "
        } qw(las2.c svdlib.c svdlib.h svdutil.c svdutil.h));

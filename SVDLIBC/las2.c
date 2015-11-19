@@ -28,6 +28,9 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ * Modified by moocow for PDL::SVDLIBC distribution
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -370,12 +373,17 @@ SVDRec svdLAS2(SMat A, long dimensions, long iterations, double end[2],
   if (check_parameters(A, dimensions, iterations, end[0], end[1], TRUE))
     return NULL;
 
+#if 0
+  /* Fri, 24 Jul 2015 11:31:27 +0200 moocow
+   *  + disable transposition for PDL::SVDLIBC, since we're getting segfaults whenever this code runs
+   */
   /* If A is wide, the SVD is computed on its transpose for speed. */
   if (A->cols >= A->rows * 1.2) {
     if (SVDVerbosity > 0) printf("TRANSPOSING THE MATRIX FOR SPEED\n");
     transpose = TRUE;
     A = svdTransposeS(A);
   }
+#endif
 
   n = A->cols;
   /* Compute machine precision */ 

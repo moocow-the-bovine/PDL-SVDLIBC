@@ -21,7 +21,7 @@ which was written by Michael Berry, Theresa Do,
 Gavin O'Brien, Vijay Krishna and Sowmini Varadhan.
 Tested version 1.33.
 
-Available from http://tedlab.mit.edu/~dr/SVDLIBC/
+Available from http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz
 
 =back
 
@@ -52,12 +52,18 @@ of required libraries, header files, etc.
 
 Bryan Jurish E<lt>moocow@cpan.orgE<gt>
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT AND LICENSE
 
-Copyright (c) 2005-2011, Bryan Jurish.  All rights reserved.
+Copyright (c) 2005-2015, Bryan Jurish.  All rights reserved.
 
 This package is free software, and entirely without warranty.
 You may redistribute it and/or modify it under the same terms
-as Perl itself.
+as Perl itself, either 5.20.2 or any newer version of Perl 5
+you have available.
+
+The SVDLIBC sources included in this distribution are themselves
+released under a BSD-like license. See the file
+F<SVDLIBC/Manual/license.html> in the PDL-SVDLIBC source distribution
+for details.
 
 =cut

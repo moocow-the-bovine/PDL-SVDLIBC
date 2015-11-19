@@ -28,6 +28,9 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ * Modified by moocow for PDL::SVDLIBC distribution
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,7 +40,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#ifndef WIN32
+/* Mon, 03 Aug 2015 08:58:16 +0200 moocow
+ *  + disable netinet/in.h for win32 (why is it even here anyways?)
+ */
 #include <netinet/in.h>
+#endif
 #include "svdlib.h"
 #include "svdutil.h"
 

@@ -12,7 +12,8 @@ if (0 && -e "./Config.cache") {
 ##--
 ## $val = cprompt($key, $message)
 ## $val = cprompt($key, $message, $default)
-##   + sets $cconfig{$key}
+##   + prompt for and sets configuration value $cconfig{$key}
+##   + uses ExtUtils::MakeMaker::prompt() for cpan smoker-friendliness
 sub cprompt {
   my ($key, $msg, $default)=@_;
   return $cconfig{$key} if (defined($cconfig{$key}));
@@ -27,60 +28,8 @@ sub cprompt {
 
 ## $SVD_SRCDIR : location of SVDLIBC sources
 #my $SVD_SRC0 = (grep {-d $_} qw(./SVDLIBC ../SVDLIBC))[0] // "http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz";
-my $SVD_SRCDIR  = 'SVDLIBC';
-my $SVD_SRCFILE = 'svdlibc.tgz';
-my $SVD_SRC0 = (
-		#(grep {-d $_} qw(./SVDLIBC ../SVDLIBC)), ##-- disable in-place SRCDIR to see if that helps cpantesters failures (v0.14, Tue, 17 Nov 2015 14:55:43 +0100)
-		#(grep {-d $_} qw(../SVDLIBC)), ##-- debug
-		(grep {-f $_} ($SVD_SRCFILE, 'svdlibc.tar.gz')),
-		"http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz",
-	       )[0];
-my $SVD_SRC  = cprompt('SVD_SRC', "SVDLIBC source directory, archive, or URL", $SVD_SRC0);
-
-$SVD_SRC =~ s{^file://}{};
-if (-d $SVD_SRC) {
-  ##-- local directory source
-  $cconfig{SVD_SRCDIR} = $SVD_SRC;
-}
-elsif (-f $SVD_SRC) {
-  ##-- local file source: buffer
-  ;
-}
-elsif ($SVD_SRC =~ m{^\w+://}) {
-  ##-- url source
-  print STDERR "Info: attempting to download SVDLIBC source from $SVD_SRC\n";
-  $SVD_SRC = get_url($SVD_SRC,$SVD_SRCFILE);
-}
-
-if (-f $SVD_SRC) {
-  ##-- source archive: unpack it
-  print STDERR "Info: attempting to unpack SVDLIBC source from $SVD_SRCFILE ... ";
-  require Archive::Tar;
-  require File::Basename;
-  my $tar = Archive::Tar->new($SVD_SRCFILE)
-    or die("Error: SVDLIBC source file $SVD_SRCFILE doesn't look like a tar archvie");
-  $tar->contains_file('SVDLIBC/svdlib.h')
-    or die("Error: SVDLIBC source archive $SVD_SRCFILE doesn't contain required file(s)");
-  foreach (grep {-f $_ || -l $_} $tar->list_files) {
-    unlink($_)
-      or die("Warning: failed to remove stale upstream source file $_");
-  }
-  $tar->extract()
-    or die("Error: failed to extract SVDLIBC source from $SVD_SRCFILE");
-  print STDERR "success.\n";
-
-  ##-- patch upstream sources
-  print STDERR "Info: attempting to patch upstream SVDLIBC sources ...\n";
-  my $rc = system("patch -p0 -i svdlibc.patch -N");
-  if ($rc==0) {
-    print STDERR "Info: patch succeeded.\n";
-  } else {
-    warn("Warning: failed to patch upstream SVDLIBC sources: segfaults may result");
-  }
-
-  $cconfig{SVD_SRCDIR} = './SVDLIBC';
-
-}
+##  + packed into PDL-SVDLIBC source distribution for PDL-SVDLIBC >= v0.15
+$cconfig{SVD_SRCDIR} = './SVDLIBC';
 
 ##-- sanity check
 if (! -d $cconfig{SVD_SRCDIR}) {
@@ -127,6 +76,14 @@ cprompt('SVD_DEFS', "Additional defines for SVDLIBC", "-D__SVDLIBC_LONG=$cconfig
 #cprompt('SVD_OBJ', "SVDLIBC objects", $SVD_OBJ);
 
 ##--------------------------------------------------------------
+## remove auto-generated sources if present
+foreach (qw(las2.c svdlib.c svdlib.h svdutil.c svdutil.h)) {
+  !-e $_
+    or unlink($_)
+    or die("Config.PL: failed to unlink intermediate source file '$_': $!");
+}
+
+##--------------------------------------------------------------
 ## save cache file
 use Data::Dumper;
 open(CACHE,">Config.cache")
@@ -137,69 +94,6 @@ print CACHE
    "1; ##-- be happy\n",
   );
 close CACHE;
-
-##--------------------------------------------------------------
-## subs
-
-## $outfile_or_undef = get_url($url, $outfile)
-##  + URL download code adapted from HTTP::UA::Parser module's Makefile.PL
-sub get_url {
-  my ($url,$outfile) = @_;
-
-  ##-- curl
-  print STDERR "+ Trying curl... ";
-  if (0 && system('curl','-sS','-o',$outfile,$url)==0) {
-    print STDERR "success.\n";
-    return $outfile;
-  }
-  print STDERR "failed.\n";
-
-  ##-- wget
-  print STDERR "+ Trying wget... ";
-  if (0 && system('wget', '-nv', '-O',$outfile, $url)==0) {
-    print STDERR "success.\n";
-    return $outfile;
-  }
-  print STDERR "failed.\n";
-
-  ##-- try LWP::UserAgent
-  print STDERR "+ Trying LWP::UserAgent... ";
-  my $rc = 'failed';
-  eval "use LWP::UserAgent";
-  if ($@) {
-    print STDERR
-      ("failed.\n",
-       "\n",
-       " Couldn't locate LWP::UserAgent module\n",
-       " LWP::UserAgent is required to fetch SVDLIBC sources from server\n",
-       " Please install it or get SVDLIBC sources manually from\n",
-       " $url\n",
-       " and place it as $SVD_SRCFILE the root folder of this distro\n",
-       " then run Makefile.PL again\n",
-       "\n",
-      );
-    exit 1;
-  }
-  my $ua = LWP::UserAgent->new;
-  $ua->timeout(5);
-  $ua->env_proxy();
-  my $response = $ua->get($url);
-  if ($response->is_success) {
-    print STDERR "success.\n";
-    open(my $outfh,">$outfile")
-      or die("Error: open failed for $outfile: $!");
-    binmode($outfh); ##-- we might be win32
-    print $outfh $response->content;
-    close($outfh)
-      or die("Error: close failed for $outfile: $!");
-    return $outfile;
-  }
-  else {
-    die "LWP::UserAgent request aborted\n";
-    exit 1;
-  }
-}
-
 
 1; ##-- return nicely
 
