@@ -85,7 +85,8 @@ PDL::SVDLIBC - PDL interface to Doug Rohde's SVD C Library
 
  $vals = svdindexND ($u, $s, $v, $which);
  $vals = svdindexNDt($ut,$s,$vt, $which);
-
+ $vals = svdindexccs($u, $s, $v, $ptr,$rowids);
+ $err  = svderror   ($u, $s, $v, $ptr,$rowids,$nzvals);
 
 =head1 DESCRIPTION
 
@@ -938,7 +939,7 @@ Perl by Larry Wall.
 
 PDL by Karl Glazebrook, Tuomas J. Lukka, Christian Soeller, and others.
 
-SVDLIBC by Dough Rohde; available at http://tedlab.mit.edu/~dr/SVDLIBC/svdlibc.tgz
+SVDLIBC by Dough Rohde.
 
 SVDPACKC by Michael Berry, Theresa Do, Gavin O'Brien, Vijay Krishna and Sowmini Varadhan.
 
