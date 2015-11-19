@@ -3,7 +3,7 @@
 \.gz$
 ^csizes
 ^pdlsizes
-^SVDLIBC$
+^SVDLIBC\.orig\b
 ^svdlibc\.tgz$
 ^SVDLIBC\.pm$
 ^SVDLIBC\.xs$
@@ -32,7 +32,6 @@
 \.tmp$
 ^#Makefile#$
 \.cache$
-^SVDLIBC/
 \.dat$
 \.gp$
 ^argh
