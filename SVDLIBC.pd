@@ -82,7 +82,6 @@ PDL::SVDLIBC - PDL interface to Doug Rohde's SVD C Library
  ##---------------------------------------------------------------------
  ## SVD decoding (lookup)
  ##---------------------------------------------------------------------
-
  $vals = svdindexND ($u, $s, $v, $which);
  $vals = svdindexNDt($ut,$s,$vt, $which);
  $vals = svdindexccs($u, $s, $v, $ptr,$rowids);
