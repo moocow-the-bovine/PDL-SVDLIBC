@@ -79,6 +79,13 @@ PDL::SVDLIBC - PDL interface to Doug Rohde's SVD C Library
 
  svdlas2($ptr, $rowids, $nzvals, $m, $maxiters, $end, $kappa, $ut, $s, $vt);
 
+ ##---------------------------------------------------------------------
+ ## SVD decoding (lookup)
+ ##---------------------------------------------------------------------
+
+ $vals = svdindexND ($u, $s, $v, $which);
+ $vals = svdindexNDt($ut,$s,$vt, $which);
+
 
 =head1 DESCRIPTION
 
@@ -535,6 +542,10 @@ These can be attained for a dense matric $a() e.g. by:
  $which  = $a->whichND->qsortvec->xchg(0,1);
  $nzvals = $a->indexND($which->xchg(0,1));
 
+For convenience, $which() will be implicitly transposed if it is passed
+as a list-of-vectors C<$whichND(2,nnz)> such as returned by L<whichND()|PDL::Primitive/whichND>,
+but it must still be lexicographically sorted.
+
 See also: svdlas2a(), svdlas2d()
 
 =cut
@@ -582,7 +593,12 @@ pp_def
   sm.rowind = (__SVDLIBC_LONG *) ($P(whichi) + $SIZE(nnz));
   sm.value  = (double *) $P(nzvals);
 
-  /*-- ensure sorted whichi() --*/
+  /*-- sanity check: dimension "Two" --*/
+  if ($SIZE(Two) != 2) {
+     croak("svdlas2w(): bogus input dimension Two=%ld for indices whichi(nnz,Two) must be 2", $SIZE(Two));
+  }
+
+  /*-- sanity check: sorted whichi() --*/
   for (ci=0,nzi=0; nzi < $SIZE(nnz); ++nzi) {
     nzc = $whichi(nnz=>nzi,Two=>0);
     if ( nzc < ci )
@@ -702,6 +718,208 @@ Guts for _svdlas2d().
 );
 #pp_add_exported('', 'svdlas2d');
 
+##======================================================================
+## SVD decoding
+
+##------------------------------------------------------
+## svdindexND() : sparse decoded lookup (whichND-style)
+pp_def
+  ('svdindexND',
+   Pars => join("\n    ",
+		'',
+		qq( u(d,m);),
+		qq( s(d);),
+		qq( v(d,n);),
+		qq($INDX which(Two,nnz);),
+		qq([o] vals(nnz);),
+		'',
+	       ),
+   Code =>
+('
+    /*-- sanity check: dimension "Two" --*/
+    if ($SIZE(Two) != 2) {
+     croak("svdlas2w(): bogus input dimension Two=%ld for indices whichi(nnz,Two) must be 2", $SIZE(Two));
+    }
+
+    /*-- guts --*/
+    loop(nnz) %{
+      $GENERIC(vals) v = 0;
+      loop(d) %{
+	__SVDLIBC_LONG ni=$which(Two=>0), mi=$which(Two=>1);
+	v += $u(m=>mi) * $s() * $v(n=>ni);
+      %}
+      $vals() = v;
+    %}
+'),
+   Doc =>
+q(
+Lookup selected values in an SVD-encoded matrix, L<indexND()|PDL::Primitive/indexND>-style.
+Should be equivalent to:
+
+ ($u x stretcher($s) x $v->xchg(0,1))->indexND($which)
+
+or its PDL-friendlier variant:
+
+ ($u * $s)->matmult($v->xchg(0,1))->indexND($which)
+
+... but only computes the specified values $which(), avoiding
+memory bottlenecks for large sparse matrices.
+This is a pure PDL::PP method, so you can use e.g.
+C<float> for the SVD-encoded matrix if you wish.
+
+),
+);
+
+##------------------------------------------------------
+## svdindexNDt() : sparse decoded lookup (transposed svd, whichND-style)
+
+pp_add_exported('','svdindexNDt');
+pp_addpm(<<'EOPM');
+
+=pod
+
+=head2 svdindexNDt
+
+=for sig
+
+    ut(m,d); s(d); vt(n,d); indx which(Two,nnz); [o] vals(nnz);
+
+Wrapper for L<svdindexND()|/svdindexND> accepting transposed singular components
+$ut() and $vt() as returned by e.g. L<svdlas2()|/svdlas2>.
+
+=cut
+
+sub svdindexNDt {
+   return svdindexND($_[0]->xchg(0,1),$_[1],$_[2]->xchg(0,1),@_[3..$#_]);
+}
+
+EOPM
+
+##------------------------------------------------------
+## svdindexccs() : sparse decoded lookup, ptr+rowids
+pp_def
+  ('svdindexccs',
+   Pars => join("\n    ",
+		'',
+		qq( u(d,m);),
+		qq( s(d);),
+		qq( v(d,n);),
+		qq($INDX ptr(nplus1);),
+		qq($INDX rowids(nnz);),
+		qq([o] vals(nnz);),
+		'',
+	       ),
+   Code =>
+('
+    /*-- sanity checks: ptr --*/
+    if ($SIZE(nplus1) <= $SIZE(n)) {
+       croak("svdindexccs(): bogus input dimension nplus1=%ld must be greater than n=%ld", $SIZE(nplus1), $SIZE(n));
+    }
+
+    /*-- guts --*/
+    loop(n) %{
+      __SVDLIBC_LONG n1 = n+1;
+      __SVDLIBC_LONG nzi, nzj=$ptr(nplus1=>n1);
+      for (nzi=$ptr(nplus1=>n); nzi < nzj; ++nzi) {
+	__SVDLIBC_LONG mi = $rowids(nnz=>nzi);
+	$GENERIC(vals) v=0;
+	loop(d) %{ v += $u(m=>mi) * $s() * $v(); %}
+	$vals(nnz=>nzi) = v;
+      }
+    %}
+'),
+   Doc =>
+q(
+Lookup selected values in an SVD-encoded matrix using L<PDL::CCS|/PDL::CCS>-style indexing
+as for L<svdlas2a()|/svdlas2a>.
+
+),
+);
+
+##------------------------------------------------------
+## svderror() : compute sum of squared errors for sparse matrix
+pp_def
+  ('svderror',
+   Pars => join("\n    ",
+		'',
+		qq(u(d,m);),
+		qq(s(d);),
+		qq(v(d,n);),
+		qq($INDX ptr(nplus1);),
+		qq($INDX rowids(nnz);),
+		qq(nzvals(nnz);),
+                qq([o]err();),
+		'',
+	       ),
+   Code =>
+('
+    $GENERIC(err) e=0;
+    __SVDLIBC_LONG n1, nzi,nzj;
+    $GENERIC(rowids) ri;
+
+    /*-- sanity checks: ptr --*/
+    if ($SIZE(nplus1) <= $SIZE(n)) {
+       croak("svderror(): bogus input dimension nplus1=%ld must be greater than n=%ld", $SIZE(nplus1), $SIZE(n));
+    }
+
+    /*-- sanity checks: sorted row-ids --*/
+    loop(n) %{
+      n1  = n+1;
+      nzj = $ptr(nplus1=>n1);
+      ri  = 0;
+      for (nzi=$ptr(nplus1=>n); nzi < nzj; ++nzi) {
+        if ($rowids(nnz=>nzi) < ri)
+          croak("svderror(): input rowids() are not sorted at nnz=%ld", nzi);
+	ri = $rowids(nnz=>nzi);
+      }
+    %}
+
+    /*-- guts --*/
+    loop(n) %{
+      n1  = n+1;
+      nzi = $ptr(nplus1=>n);
+      nzj = $ptr(nplus1=>n1);
+      ri  = nzi < nzj ? $rowids(nnz=>nzi) : (__SVDLIBC_LONG)-1;
+      loop(m) %{
+         /*-- decode value --*/
+         $GENERIC(nzvals) v= 0;
+         loop(d) %{ v += $u() * $s() * $v(); %}
+
+         /*-- dispatch: is this the next encoded value? --*/
+         if (m==ri) {
+           v -= $nzvals(nnz=>nzi);
+           ++nzi;
+           ri = nzi < nzj ? $rowids(nnz=>nzi) : (__SVDLIBC_LONG)-1;
+         }
+         e += v*v;
+      %}
+    %}
+
+    $err() = e;
+'),
+   Doc =>
+q(
+Compute sum of squared errors for a sparse SVD-encoded matrix.
+Should be equivalent to:
+
+ sum( ($a - ($u x stretcher($s) x $v->xchg(0,1)))**2 )
+
+... but computes all values on-the-fly, avoiding
+memory bottlenecks for large sparse matrices.
+This is a pure PDL::PP method, so you can use e.g.
+C<float> for the SVD-encoded matrix if you wish.
+
+Error contributions are computed even for "missing" (zero) values,
+so running time is O(n*m).
+Consider using L<svdindexND()|/svdindexND> or L<svdindexccs()|/svdindexccs>
+to compute error rates
+only for non-missing values if you have a large sparse matrix, e.g.:
+
+ $svdvals = svdindexccs($u,$s,$v, $ptr,$rowids);
+ $err_nz  = ($nzvals-$svdvals)->pow(2)->sumover;
+
+),
+);
 
 ##======================================================================
 ## Footer Administrivia

@@ -144,7 +144,7 @@ sub tlas2w {
   tcheck('las2w', $uw, $sw, $vw);
   return;
 }
-tlas2w();
+#tlas2w();
 
 
 use vars qw($udt $ud $sd $ssd $vdt $vd);
@@ -329,6 +329,125 @@ sub checkallr {
   tcheckr('las2', $u2r, $s2r, $v2r);
 }
 #checkallr;
+
+##--------------------------------------------------------------------
+## Lookup
+
+sub tcheckvals {
+  my ($label,$which,$vals,$eps) = @_;
+  my $want = $p->indexND($which);
+  $label = '(nolabel)' if (!$label);
+  $eps   = 1e-5 if (!$eps);
+  print
+    ("$label: vals: ", (all($vals->approx($want,$eps)) ? "ok": "NOT ok"), "\n",
+     "  + avg(err)=",sprintf("%.2g", abs($vals-$want)->avg), "\n",
+     "  + avg(err%)=",sprintf("%.2g %%", 100*(abs($vals-$want)/$want)->avg), "\n",
+     "  + avg(s^2)=",sprintf("%.2g", (($vals-$want)**2)->avg), "\n",
+     "  + sum(s^2)=",sprintf("%.2g", (($vals-$want)**2)->sum), "\n",
+    );
+}
+
+sub svdreduce {
+  my ($u,$s,$v,$d) = @_;
+  $d = $s->nelem if (!defined($d) || $d > $s->nelem);
+  my $end = $d-1;
+  return ($u->slice("0:$end,:"),$s->slice("0:$end"),$v->slice("0:$end,"));
+}
+
+sub tindexnd {
+  tdata() if (!defined($p));
+
+  ##-- want data
+  my $want = $whichv;
+  my ($u,$s,$v,$vals, $ur,$sr,$vr, $ut,$vt, $whichp);
+
+  ##-- svd
+  ($u,$s,$v) = svd($a);
+  $vals = svdindexND($u,$s,$v, $whichi);
+  tcheckvals("svd+svdindexND(d=n)", $whichi,$vals);
+  ##
+  $vals = svdindexNDt($u->xchg(0,1),$s,$v->xchg(0,1), $whichi);
+  tcheckvals("svd+svdindexNDt(d=n)", $whichi,$vals);
+
+  ##-- svd+reduce
+  ($ur,$sr,$vr) = svdreduce($u,$s,$v, 5);
+  $vals = svdindexND($ur,$sr,$vr, $whichi);
+  tcheckvals("svd+svdindexNDt(d<n)", $whichi,$vals,0.5);
+  ##
+  $vals = svdindexNDt($ur->xchg(0,1),$sr,$vr->xchg(0,1), $whichi);
+  tcheckvals("svd+svdindexNDt(d<n)", $whichi,$vals,0.5);
+
+  ##-- svdlas2ad()
+  ($ut,$s,$vt) = svdlas2ad($a);
+  $vals = svdindexNDt($ut,$s,$vt, $whichi);
+  tcheckvals("svdlas2ad+svdindexNDt(d=n)", $whichi,$vals);
+
+  ##-- svdlas2ad() + reduce
+  ($ut,$s,$vt) = svdlas2ad($a, 5);
+  $vals = svdindexNDt($ut,$s,$vt, $whichi);
+  tcheckvals("svdlas2ad+svdindexNDt(d<n)", $whichi,$vals,0.5);
+
+  ##-- svdlas2a()
+  ($ut,$s,$vt) = svdlas2a($ptr,$rowids,$nzvals, $m);
+  $vals = svdindexNDt($ut,$s,$vt, $whichi);
+  tcheckvals("svdlas2a+svdindexNDt(d=n)", $whichi,$vals);
+
+  ##-- svdlas2a() + reduce
+  ($ut,$s,$vt) = svdlas2a($ptr,$rowids,$nzvals, $m,5);
+  $vals = svdindexNDt($ut,$s,$vt, $whichi);
+  tcheckvals("svdlas2a+svdindexNDt(d<n)", $whichi,$vals,0.5);
+
+  ##-- svdlas2a() + reduce: indexccs()
+  ($ut,$s,$vt) = svdlas2a($ptr,$rowids,$nzvals, $m,5);
+  $whichp = ccswhichND($ptr,$rowids);
+  $vals   = svdindexccs($ut->xchg(0,1),$s,$vt->xchg(0,1), $ptr,$rowids);
+  tcheckvals("svdlas2a+indexccs(d<n)", $whichp,$vals,0.5);
+}
+tindexnd(); exit 0;
+
+##--------------------------------------------------------------------
+## sum-of-squared errors
+
+sub tcheckerr {
+  my ($label,$u,$s,$v,$err, $eps) = @_;
+  my $want = (($a-($u * $s)->matmult($v->xchg(0,1)))**2)->flat->sumover;
+  $label = '(nolabel)' if (!$label);
+  $eps   = 1e-5 if (!$eps);
+  print "$label: err: ", ($want->approx($err) ? "ok" : "NOT ok"), "\n",
+}
+
+sub tsvderror {
+  tdata() if (!defined($p));
+  my ($u,$s,$v, $err, $ur,$sr,$vr, $svdvals,$err_nz,$err_z);
+
+  ##-- svd
+  ($u,$s,$v) = svd($a);
+  $err = svderror($u,$s,$v, $ptr,$rowids,$nzvals);
+  tcheckerr("svd,d=n", $u,$s,$v,$err);
+
+  ##-- svd:reduced
+  ($ur,$sr,$vr) = svdreduce($u,$s,$v,5);
+  $err = svderror($ur,$sr,$vr, $ptr,$rowids,$nzvals);
+  tcheckerr("svd,d<n", $ur,$sr,$vr,$err);
+
+  ##-- svd:reduced, approx
+  $svdvals = svdindexND($ur,$sr,$vr, $whichi);
+  $err_nz  = ($nzvals-$svdvals)->pow(2)->sumover;
+  $err
+  
+}
+tsvderror(); exit 0;
+
+sub tsvderror_dbg {
+  tdata() if (!defined($p));
+  my ($u,$s,$v, $err0,$err);
+
+  ##-- svd
+  ($u,$s,$v) = svd($a);
+  $err0 = ($a-($u * $s)->matmult($v->xchg(0,1)))**2;
+  $err  = svderror_dbg($u,$s,$v, $ptr,$rowids,$nzvals);
+}
+#tsvderror_dbg(); exit 0;
 
 
 ##---------------------------------------------------------------------
