@@ -40,11 +40,20 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef WIN32
-/* Mon, 03 Aug 2015 08:58:16 +0200 moocow
+#if 0
+/* Mon, Tue, 24 Nov 2015 09:42:30 +0100 moocow
  *  + disable netinet/in.h for win32 (why is it even here anyways?)
+ *    - probably for ntohl() and htonl(); gnu libc docs say:
+ *        uint32_t ntohl (uint32_t NETLONG)
+ *        converts the 'uint32_t' integer NETLONG from network byte order to host byte order;
+ *        This is used for IPv4 Internet addresses.
+ *      * this is only used by svd_(read|write)Bin(Int|Float)() functions, which
+ *        we don't need here; replacing calls with dummy macros
  */
 #include <netinet/in.h>
+#else
+#define svdlibc_ntohl(x) x
+#define svdlibc_htonl(x) x
 #endif
 #include "svdlib.h"
 #include "svdutil.h"
@@ -242,7 +251,7 @@ void svd_closeFile(FILE *file) {
 char svd_readBinInt(FILE *file, int *val) {
   int x;
   if (fread(&x, sizeof(int), 1, file) == 1) {
-    *val = ntohl(x);
+    *val = svdlibc_ntohl(x);	//-- moo: disable ntohl() for PDL::SVDLIBC
     return FALSE;
   }
   return TRUE;
@@ -253,7 +262,7 @@ char svd_readBinFloat(FILE *file, float *val) {
   int x;
   float y;
   if (fread(&x, sizeof(int), 1, file) == 1) {
-    x = ntohl(x);
+    x = svdlibc_ntohl(x);	//-- moo: disable ntohl() for PDL::SVDLIBC
     y = *((float *) &x);
     *val = y;
     return FALSE;
@@ -262,14 +271,14 @@ char svd_readBinFloat(FILE *file, float *val) {
 }
 
 char svd_writeBinInt(FILE *file, int x) {
-  int y = htonl(x);
+  int y = svdlibc_htonl(x);	//-- moo: disable htonl() for PDL::SVDLIBC
   if (fwrite(&y, sizeof(int), 1, file) != 1) return TRUE;
   return FALSE;
 }
 
 /* This takes a real in host order and writes a float in network order. */
 char svd_writeBinFloat(FILE *file, float r) {
-  int y = htonl(*((int *) &r));
+  int y = svdlibc_htonl(*((int *) &r));	//-- moo: disable htonl() for PDL::SVDLIBC
   if (fwrite(&y, sizeof(int), 1, file) != 1) return TRUE;
   return FALSE;
 }

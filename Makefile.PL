@@ -32,6 +32,7 @@ $hash{CONFIGURE_REQUIRES} = {
 			    };
 $hash{DIR} = [];
 $hash{VERSION_FROM} = 'SVDLIBC.pd';
+$hash{LICENSE} = 'perl';
 $hash{clean}{FILES} .= 'las2.c svdlib.c svdutil.c svdutil.h svdlib.h';
 $hash{realclean}{FILES} .= '*~ *.tmp README.txt Config.cache';
 
