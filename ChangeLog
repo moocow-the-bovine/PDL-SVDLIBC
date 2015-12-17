@@ -1,8 +1,13 @@
 ChangeLog for perl/PDL module PDL::SVDLIBC
 
+v0.17 Thu, 17 Dec 2015 16:24:33 +0100 moocow
+	+ fixed wrongly succeeding bogus tests with unary ok()
+	  - tests now use Test::More and re-factored common test subroutines
+	+ pdlmaker.plm doesn't distribute generated PM files any more (PDL now does this for us)
+
 v0.16 Tue, 24 Nov 2015 09:44:58 +0100 moocow
 	+ cpantesters win32 builds now failing with "svdutil.o:svdutil.c:(.text+0xabd): undefined reference to `htonl'"
-	+ replacing netinet/in.h htonl() and ntohl() calls with dummy macros, since they're not really used here
+	+ replacing netinet/in.h htonl() and ntohl() calls with dummy macros, since they're not really used here (--> win32 builds succeed!)
 
 v0.15 Thu, 19 Nov 2015 14:28:15 +0100 moocow
 	+ still no joy with v0.14 cpan smoker hacks on win32

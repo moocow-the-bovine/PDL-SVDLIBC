@@ -24,6 +24,7 @@ $hash{AUTHOR} = 'Bryan Jurish';
 $hash{ABSTRACT} = 'PDL interface to Doug Rohde\'s SVD C Library';
 $hash{PREREQ_PM} = {
 		    PDL=>0,
+		    'Test::More'=>0,
 		   };
 $hash{CONFIGURE_REQUIRES} = {
 			     'PDL'=>0,
