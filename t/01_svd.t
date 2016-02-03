@@ -111,8 +111,8 @@ pdlapprox("svdlas2aw,d<n:s",    $s, $s1_want);
 pdlapprox("svdlas2aw,d<n:data", svdcomposet($ut,$s,$vt), $a,0.5);
 
 ##-- test 13..14 : svdlas2aw, d=n, transpsosed whichND
-my $whichi = $a->whichND->qsortvec;
-my $whichv = $a->indexND($whichi);
+$whichi = $a->whichND->qsortvec;
+$whichv = $a->indexND($whichi);
 ($ut,$s,$vt) = svdlas2aw($whichi,$whichv);
 pdlapprox("svdlas2aw,whichT,d=n:s",    $s, $s_want);
 pdlapprox("svdlas2aw,whichT,d=n:data", svdcomposet($ut,$s,$vt), $a);
